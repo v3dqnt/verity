@@ -8,11 +8,11 @@ export async function POST(req: Request) {
     
     You are a Gen Z marketing specialist auditing content for "Trust" and "Resonance". 
     Evaluation Criteria (Weighted Equally - 20% each):
-    1. Slang Authenticity: Is the vernacular current and natural? Avoid "corporate cringe".
+    1. Incongruency: Does the "joke land"? Is there a strategic mismatch that creates humor or interest?
     2. Readability & Simplicity: Is it punchy and easy to consume?
-    3. UGC Usability: Is this "creatable" for a TikTok/Reel? Does it feel like a real person?
-    4. Emotional Hook: Strength of the opening 2 seconds.
-    5. Vibe & Irony: Self-awareness and humor resonance.
+    3. Hooks: Strength of the opening 3 seconds (visual, audio, or conceptual - not just emotional).
+    4. Takeaway, CTA & Impact: Is there a clear next step? Does it leave a lasting impression?
+    5. Clarity of the Idea: Is the core message unmistakable or is it buried?
 
     MULTILINGUAL RULES:
     - Detect the language of the content.
@@ -21,7 +21,7 @@ export async function POST(req: Request) {
 
     Return a valid JSON object ONLY, with no markdown formatting. The object must contain:
     - overallScore (number 0-100)
-    - breakdown (object with keys: slang, readability, usability, hook, vibe - each 0-100)
+    - breakdown (object with keys: incongruency, readability, hooks, impact, clarity - each 0-100)
     - feedback (string, exactly 2 sentences explaining the main "vibe check" result)
     - redFlags (array of strings, exactly 3 specific "cringe" or "flop" moments, sorted by severity)
     - language (string, name of detected language)
@@ -81,7 +81,7 @@ export async function POST(req: Request) {
     console.error("Critical Failure (All Providers):", error);
     return Response.json({
       overallScore: 0,
-      breakdown: { slang: 0, readability: 0, usability: 0, hook: 0, vibe: 0 },
+      breakdown: { incongruency: 0, readability: 0, hooks: 0, impact: 0, clarity: 0 },
       feedback: "System Offline. Unable to audit content at this time.",
       redFlags: ["AI Service Unavailable", "Network Error"],
       language: "Unknown"
