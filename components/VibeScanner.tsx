@@ -130,11 +130,11 @@ export function VibeScanner() {
               <div className="flex-1 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <RadarChart cx="50%" cy="50%" outerRadius="80%" data={[
-                    { subject: 'Slang', A: result.breakdown.slang, fullMark: 100 },
+                    { subject: 'Incongruency', A: result.breakdown.incongruency, fullMark: 100 },
                     { subject: 'Readability', A: result.breakdown.readability, fullMark: 100 },
-                    { subject: 'Usability', A: result.breakdown.usability, fullMark: 100 },
-                    { subject: 'Hook', A: result.breakdown.hook, fullMark: 100 },
-                    { subject: 'Vibe', A: result.breakdown.vibe, fullMark: 100 },
+                    { subject: 'Hooks', A: result.breakdown.hooks, fullMark: 100 },
+                    { subject: 'Impact', A: result.breakdown.impact, fullMark: 100 },
+                    { subject: 'Clarity', A: result.breakdown.clarity, fullMark: 100 },
                   ]}>
                     <PolarGrid stroke="#333" />
                     <PolarAngleAxis dataKey="subject" tick={{ fill: '#666', fontSize: 10, fontWeight: 'bold' }} />
@@ -154,11 +154,11 @@ export function VibeScanner() {
             {/* NUMERICAL BREAKDOWN */}
             <div className="grid grid-cols-1 gap-4">
               {[
-                { label: 'Slang Authenticity', key: 'slang', color: 'emerald' },
+                { label: 'Incongruency (Joke Landing)', key: 'incongruency', color: 'emerald' },
                 { label: 'Readability & Simplicity', key: 'readability', color: 'blue' },
-                { label: 'UGC Usability', key: 'usability', color: 'purple' },
-                { label: 'Emotional Hook', key: 'hook', color: 'orange' },
-                { label: 'Vibe & Irony', key: 'vibe', color: 'pink' },
+                { label: 'Hooks (Not Just Emotional)', key: 'hooks', color: 'purple' },
+                { label: 'Takeaway, CTA & Impact', key: 'impact', color: 'orange' },
+                { label: 'Clarity of the Idea', key: 'clarity', color: 'pink' },
               ].map((item) => (
                 <div key={item.key} className="bg-zinc-900/30 border border-white/5 p-6 rounded-2xl flex items-center justify-between group hover:border-white/10 transition-colors">
                   <div>
