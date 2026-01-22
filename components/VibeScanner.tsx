@@ -1,6 +1,10 @@
 "use client";
 import { useState } from 'react';
-import { Zap, ShieldAlert, Sparkles, Loader2, Copy } from 'lucide-react';
+import { Zap, ShieldAlert, Sparkles, Loader2, Globe, BarChart3, Info } from 'lucide-react';
+import {
+  Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
+  ResponsiveContainer, PieChart, Pie, Cell, Tooltip
+} from 'recharts';
 
 export function VibeScanner() {
   const [input, setInput] = useState('');
@@ -49,51 +53,130 @@ export function VibeScanner() {
 
       {/* 2. FULL ANALYSIS REPORT */}
       {result && (
-        <div className="animate-in slide-in-from-bottom-8 duration-700 space-y-6 pb-20">
+        <div className="animate-in fade-in slide-in-from-bottom-8 duration-1000 space-y-8 pb-20">
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* SCORE AREA */}
-            <div className="bg-zinc-900 border border-white/5 p-8 rounded-[2rem] flex flex-col justify-center items-center text-center">
-              <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-2">Authenticity Rating</span>
-              <div className="text-7xl font-black text-white italic">
-                {result.overallScore}<span className="text-emerald-500">%</span>
+          {/* HEADER SCORES */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+            {/* MAIN SCORE & FEEDBACK */}
+            <div className="lg:col-span-2 bg-zinc-900/80 border border-white/5 p-10 rounded-[3rem] backdrop-blur-sm relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-8">
+                <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-4 py-1.5 rounded-full">
+                  <Globe size={12} className="text-emerald-500" />
+                  <span className="text-[10px] font-mono text-emerald-500 uppercase tracking-widest">{result.language || "Universal"}</span>
+                </div>
               </div>
-              <p className="text-zinc-400 text-sm mt-4 font-medium italic leading-snug">
-                "{result.feedback}"
-              </p>
+
+              <div className="flex flex-col md:flex-row items-center gap-12">
+                <div className="relative">
+                  <div className="w-48 h-48 rounded-full border-4 border-emerald-500/20 flex items-center justify-center relative">
+                    <div className="text-6xl font-black text-white italic">
+                      {result.overallScore}<span className="text-emerald-500 text-3xl">/100</span>
+                    </div>
+                    {/* SVG Progress Ring */}
+                    <svg className="absolute -inset-1 w-50 h-50 -rotate-90">
+                      <circle
+                        cx="100" cy="100" r="96"
+                        fill="transparent"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                        strokeDasharray={2 * Math.PI * 96}
+                        strokeDashoffset={2 * Math.PI * 96 * (1 - result.overallScore / 100)}
+                        className="text-emerald-500 transition-all duration-1000 ease-out"
+                      />
+                    </svg>
+                  </div>
+                  <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-[0.3em] text-center mt-6">Audit Score</p>
+                </div>
+
+                <div className="flex-1 space-y-4">
+                  <h3 className="text-zinc-500 text-[10px] font-mono uppercase tracking-[0.3em] flex items-center gap-2">
+                    <Info size={14} className="text-emerald-500" /> Executive Summary
+                  </h3>
+                  <p className="text-2xl font-medium text-white leading-relaxed italic">
+                    "{result.feedback}"
+                  </p>
+                </div>
+              </div>
             </div>
 
-            {/* REASONS / RED FLAGS AREA */}
-            <div className="md:col-span-2 bg-zinc-900 border border-white/5 p-8 rounded-[2rem]">
-              <h3 className="text-zinc-500 text-[10px] font-mono uppercase tracking-[0.3em] mb-6 flex items-center gap-2">
-                <ShieldAlert size={14} className="text-red-500" /> Detected Inconsistencies
+            {/* QUICK STATS / RED FLAGS */}
+            <div className="bg-zinc-900 border border-white/5 p-8 rounded-[3rem]">
+              <h3 className="text-zinc-500 text-[10px] font-mono uppercase tracking-[0.3em] mb-8 flex items-center gap-2">
+                <ShieldAlert size={14} className="text-red-500" /> Red Flags ({result.redFlags.length})
               </h3>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {result.redFlags.map((flag: string, i: number) => (
-                  <div key={i} className="bg-white/5 border border-white/5 p-4 rounded-xl text-zinc-300 text-sm flex items-center gap-3">
-                    <div className="w-1 h-1 bg-red-500 rounded-full" />
-                    {flag}
+                  <div key={i} className="flex gap-4 items-start group">
+                    <div className="w-1.5 h-1.5 rounded-full bg-red-500 mt-1.5 shrink-0 group-hover:scale-150 transition-transform" />
+                    <p className="text-zinc-400 text-sm leading-tight">{flag}</p>
                   </div>
                 ))}
+                {result.redFlags.length === 0 && (
+                  <p className="text-emerald-500/50 text-sm italic">No cringe detected. You're clear.</p>
+                )}
               </div>
             </div>
           </div>
 
-          {/* REVAMPED SCRIPT AREA */}
-          <div className="bg-gradient-to-br from-emerald-950/20 to-zinc-900 border border-emerald-500/20 p-10 rounded-[2.5rem] relative group">
-            <h3 className="text-emerald-500 text-[10px] font-mono uppercase tracking-[0.3em] mb-6 flex items-center gap-2">
-              <Sparkles size={14} /> Recommended Revamp
-            </h3>
-            <p className="text-white text-2xl font-bold leading-relaxed pr-10">
-              {result.improvedVersion}
-            </p>
-            <button
-              onClick={() => navigator.clipboard.writeText(result.improvedVersion)}
-              className="absolute top-10 right-10 text-zinc-600 hover:text-white transition-colors"
-              title="Copy to clipboard"
-            >
-              <Copy size={20} />
-            </button>
+          {/* ANALYTICS DASHBOARD */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+            {/* RADAR CHART */}
+            <div className="bg-zinc-900/50 border border-white/5 p-10 rounded-[3rem] h-[500px] flex flex-col">
+              <h3 className="text-zinc-500 text-[10px] font-mono uppercase tracking-[0.3em] mb-10 flex items-center gap-2">
+                <BarChart3 size={14} className="text-emerald-500" /> Performance Dimensions
+              </h3>
+              <div className="flex-1 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RadarChart cx="50%" cy="50%" outerRadius="80%" data={[
+                    { subject: 'Slang', A: result.breakdown.slang, fullMark: 100 },
+                    { subject: 'Readability', A: result.breakdown.readability, fullMark: 100 },
+                    { subject: 'Usability', A: result.breakdown.usability, fullMark: 100 },
+                    { subject: 'Hook', A: result.breakdown.hook, fullMark: 100 },
+                    { subject: 'Vibe', A: result.breakdown.vibe, fullMark: 100 },
+                  ]}>
+                    <PolarGrid stroke="#333" />
+                    <PolarAngleAxis dataKey="subject" tick={{ fill: '#666', fontSize: 10, fontWeight: 'bold' }} />
+                    <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
+                    <Radar
+                      name="Audit"
+                      dataKey="A"
+                      stroke="#10b981"
+                      fill="#10b981"
+                      fillOpacity={0.3}
+                    />
+                  </RadarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* NUMERICAL BREAKDOWN */}
+            <div className="grid grid-cols-1 gap-4">
+              {[
+                { label: 'Slang Authenticity', key: 'slang', color: 'emerald' },
+                { label: 'Readability & Simplicity', key: 'readability', color: 'blue' },
+                { label: 'UGC Usability', key: 'usability', color: 'purple' },
+                { label: 'Emotional Hook', key: 'hook', color: 'orange' },
+                { label: 'Vibe & Irony', key: 'vibe', color: 'pink' },
+              ].map((item) => (
+                <div key={item.key} className="bg-zinc-900/30 border border-white/5 p-6 rounded-2xl flex items-center justify-between group hover:border-white/10 transition-colors">
+                  <div>
+                    <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-1">{item.label}</p>
+                    <div className="h-1.5 w-48 bg-white/5 rounded-full mt-2 overflow-hidden">
+                      <div
+                        className="h-full bg-emerald-500 transition-all duration-1000 ease-out"
+                        style={{ width: `${result.breakdown[item.key]}%` }}
+                      />
+                    </div>
+                  </div>
+                  <div className="text-3xl font-black text-white italic">
+                    {result.breakdown[item.key]}<span className="text-zinc-600 text-sm ml-1"> pts</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
           </div>
 
         </div>
