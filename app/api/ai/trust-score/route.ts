@@ -26,53 +26,40 @@ export async function POST(req: Request) {
 
     const prompt = `Analyze this short-form script/transcript: "${content}".
 
-You are a Viral Mechanics Auditor. You do not judge content by "quality" or "artistry," but by "Share Impulse" and "Algorithm Retention Logic."
+You are a Viral Mechanics Auditor. Your job is to distinguish between "Explainer/Lecture" content (High quality but Low views) and "Platform Weapons" (Viral events).
 
 EVALUATION FRAMEWORK: "The MRI Mechanism"
 
-1. THE HOOK MECHANICS (3-Second Window)
-- The Intro Tax: Does it start with "Hi I'm..." or "Growing up..."? (DEDUCT Points). These are linear/anecdotal and have a 90% bounce rate for new viewers.
-- The Information Gap: Does it start with a claim of "Underrated," "The Truth," or a direct attack on status quo? (REWARD Points). 
-- Identity-Authority: Is the speaker's identity (e.g., "I'm 19") used as a weapon against a system (e.g., "Big Creators")?
+1. THE HOOK ARCHETYPE (3-Second Window)
+- The Passive/Hearsay Tax: Does it start with "They say that..." (ऐसे कहते हैं कि...), "A lot of people think...", or general observations? (SEVERE PENALTY). These are "Secondary Hooks"—they lack immediate personal stakes and authority.
+- The Intro Tax: "Hi I'm..." or "Growing up..." (DEDUCT Points).
+- The Active Authority Hook: Does it start with a defiant opinion, a specific "Underrated" claim, or a direct "Truth" that breaks common logic? (REWARD Points).
 
-2. BODY DYNAMICS (The "Logic Turn")
-- Anecdotal (Weak): "I liked this, then I didn't, now I do." (Linear storytelling for existing fans only).
-- Systemic/Conflict-Driven (Strong): "Everyone says X, but X is actually a trap because of Y." 
-- Strategic Incongruency: Is there a "Flip" where common logic is subverted? (e.g., Lifestyle content vs. Getting paid).
+2. THE "LECTURE TRAP" AUDIT (Friction vs. Flow)
+- Attention Killers: Look for formal connectives or academic fillers (e.g., "collectively," "consequently," "additional complications," "whether it is X or Y"). These make content feel like a news report or a classroom. (PENALIZE).
+- The Information Flow: Is the script "teaching" or "sharing a secret"? "Teaching" feels like a chore for the viewer. "Sharing a secret" feels like status-advancement.
 
-3. SOCIAL CURRENCY THEORY (Why people share)
-- "Nice Story" (Low Shareability): Viewer thinks "That's sweet" and swipes.
-- "Identity Weapon" (High Shareability): Viewer shares to look:
-    - Smart (The "Secret" factor)
-    - Rebellious (The "Truth-teller" factor)
-    - Validated (The "This is so us" factor)
-- Does the script make the SHARER look better for posting it?
+3. TOPIC SATURATION (Freshness Check)
+- Common Knowledge Penalty: Is the script talking about something everyone already knows? (e.g., "AI is dangerous," "Cybersecurity is important"). Unless there is a "Flip" or a completely new angle, saturated topics get a "Dullness Penalty."
+- The "Profound" vs "Obvious" Lens: Is the conclusion just a standard prediction (e.g., "Security will grow in 5 years") or a punchy, counter-intuitive insight?
 
-4. THE RETENTION LOOP (Curiosity Pacing)
-- Open Loops: Mentioning a "Big Secret" or "Underrated advice" early but not resolving it until the end.
-- Micro-Shifts: Changing the angle or tone (e.g., "Bhai, but wait...") to reset the viewer's attention span.
+4. SOCIAL CURRENCY THEORY (Sharability)
+- Identity Weaponization: Does sharing this help a specific tribe (Gen Z, creators, rebels) say something about themselves?
+- Status Reward: Does the sharer look "smart" or just "informed"? Being "informed" is for news apps; being "smart/insider" is for Reels/TikTok.
 
-VIRALITY MRI SCORING CRITERIA:
-
-1. Hook Strength: (Value-first vs. Story-first). High score for immediate status-quo disruption.
-2. Strategic Polarity: (The "Us vs. Them" lens). Does it pick a side?
-3. Social Currency: Does this weaponize the viewer's identity?
-4. Cultural Nuance: Natural use of slang/Hinglish (e.g., "Bhai," "Dal Chawal") as a "we belong" signal.
-5. Retention Factor: Pacing, open loops, and narrative speed.
-
-SCORING BENCHMARKS:
-- 0–45: "The Vlog Trap" — Quality story, but 10k view limit. Linear, anecdotal, polite.
-- 46–70: "The Competent Creator" — Solid relatability, decent pacing. 50k–100k views.
-- 71–85: "Algorithm-Eligible" — Strong polarity, identity-authority, good share currency. 100k–500k views.
-- 86–100: "Platform Weapon" — Surgical logic subversion, high status reward for sharers. Viral event potential.
+VIRALITY MRI SCORING BENCHMARKS:
+- 0–45: "The Lecture Trap/News Report" — Obvious topics, formal language, passive hooks. (Views: <10k).
+- 46–70: "The Competent Creator" — Quality information but lacks the "Flip." (Views: 10k–50k).
+- 71–85: "Algorithm-Eligible" — Active authority, good pacing, niche relatability. (Views: 50k–500k).
+- 86–100: "Platform Weapon" — Surgical logic subversion, high status reward, zero academic friction. (Views: 500k+).
 
 WEIGHTED MRI FORMULA:
-- Hook (Value/Identity Gap) x 2.0
-- Strategic Polarity (The Flip) x 2.0
+- Hook (Active Authority vs. Hearsay) x 2.0
+- Strategic Polarity (The Flip vs. The Obvious) x 2.0
+- Friction Audit (Lecture Tax) x 1.5
 - Social Currency (Share Status) x 1.5
-- Cultural Nuance (Resonance) x 1.5
-- Pacing & Loops (Retention) x 1.0
-- CTA & Impact x 1.0
+- Resonance & Nuance (Slang/Belonging) x 1.0
+- Insight Impact x 1.0
 
 Return a valid JSON object ONLY. The object MUST contain:
 - viralityScore (number 0–100, rounded to nearest integer)
