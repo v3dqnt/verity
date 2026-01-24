@@ -1,7 +1,13 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { createClient } from '@supabase/supabase-js';
+import OpenAI from "openai";
+import { NextResponse } from 'next/server';
 
 const MAX_RETRIES = 3;
 const INITIAL_BACKOFF = 1000; // 1 second
+
+// Supabase Init
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder';
 
 async function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -20,112 +26,189 @@ async function fetchWithRetry(fn: () => Promise<any>, retries = MAX_RETRIES, bac
   }
 }
 
+export async function GET(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get('userId');
+
+    if (!userId) {
+      return NextResponse.json({ error: 'User ID required' }, { status: 400 });
+    }
+
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+    const { data, error } = await supabaseAdmin
+      .from('audit_history')
+      .select('id, created_at, content, score, result')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    return NextResponse.json({ history: data });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
 export async function POST(req: Request) {
   try {
-    const { content } = await req.json();
+    const { content, userId } = await req.json();
 
-    const prompt = `Analyze this short-form script/transcript: "${content}".
+    if (!content) return NextResponse.json({ error: "No content provided" }, { status: 400 });
 
-You are a Viral Mechanics Auditor. Your job is to distinguish between "Explainer/Lecture" content (High quality but Low views) and "Platform Weapons" (Viral events).
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-EVALUATION FRAMEWORK: "The MRI Mechanism"
+    // 1. CHECKSUM / CACHE CHECK
+    // We check if this exact content has been audited for this user before.
+    // "Maintain the score if the same script is being audited twice"
+    if (userId) {
+      const { data: existing } = await supabaseAdmin
+        .from('audit_history')
+        .select('result')
+        .eq('user_id', userId)
+        .eq('content', content) // minor tweaks = diff content = new audit
+        .maybeSingle();
 
-1. THE HOOK ARCHETYPE (3-Second Window)
-- The Passive/Hearsay Tax: Does it start with "They say that..." (ऐसे कहते हैं कि...), "A lot of people think...", or general observations? (SEVERE PENALTY). These are "Secondary Hooks"—they lack immediate personal stakes and authority.
-- The Intro Tax: "Hi I'm..." or "Growing up..." (DEDUCT Points).
-- The Active Authority Hook: Does it start with a defiant opinion, a specific "Underrated" claim, or a direct "Truth" that breaks common logic? (REWARD Points).
+      if (existing) {
+        return NextResponse.json({ ...existing.result, _cached: true });
+      }
+    }
 
-2. THE "LECTURE TRAP" AUDIT (Friction vs. Flow)
-- Attention Killers: Look for formal connectives or academic fillers (e.g., "collectively," "consequently," "additional complications," "whether it is X or Y"). These make content feel like a news report or a classroom. (PENALIZE).
-- The Information Flow: Is the script "teaching" or "sharing a secret"? "Teaching" feels like a chore for the viewer. "Sharing a secret" feels like status-advancement.
+    const prompt = `Analyze this short-form script or content: "${content}".
 
-3. TOPIC SATURATION (Freshness Check)
-- Common Knowledge Penalty: Is the script talking about something everyone already knows? (e.g., "AI is dangerous," "Cybersecurity is important"). Unless there is a "Flip" or a completely new angle, saturated topics get a "Dullness Penalty."
-- The "Profound" vs "Obvious" Lens: Is the conclusion just a standard prediction (e.g., "Security will grow in 5 years") or a punchy, counter-intuitive insight?
+YOU ARE A CREATOR-CRITICAL VIRAL CONTENT STRATEGIST.
+You are a ruthless auditor. You assume viewers are impatient and the algorithm is unforgiving. Your goal is to separate "Corporate/Lecture" fluff from "Platform Weapons."
 
-4. SOCIAL CURRENCY THEORY (Sharability)
-- Identity Weaponization: Does sharing this help a specific tribe (Gen Z, creators, rebels) say something about themselves?
-- Status Reward: Does the sharer look "smart" or just "informed"? Being "informed" is for news apps; being "smart/insider" is for Reels/TikTok.
+EVALUATION FRAMEWORK: THE MERGED MRI MECHANISM
 
-VIRALITY MRI SCORING BENCHMARKS:
-- 0–45: "The Lecture Trap/News Report" — Obvious topics, formal language, passive hooks. (Views: <10k).
-- 46–70: "The Competent Creator" — Quality information but lacks the "Flip." (Views: 10k–50k).
-- 71–85: "Algorithm-Eligible" — Active authority, good pacing, niche relatability. (Views: 50k–500k).
-- 86–100: "Platform Weapon" — Surgical logic subversion, high status reward, zero academic friction. (Views: 500k+).
+1. NUANCE SENSITIVITY (Surgical Scoring)
+- Changing ONE word is the difference between a "Lecture" and a "Secret."
+- Reward active commands ("Steal this") over passive verbs ("I think").
+- Ruin the score for formal connectives ("Consequently," "Moreover") that trigger the 'Lecture Tax'.
 
-WEIGHTED MRI FORMULA:
-- Hook (Active Authority vs. Hearsay) x 2.0
-- Strategic Polarity (The Flip vs. The Obvious) x 2.0
-- Friction Audit (Lecture Tax) x 1.5
-- Social Currency (Share Status) x 1.5
-- Resonance & Nuance (Slang/Belonging) x 1.0
-- Insight Impact x 1.0
+2. THE "HEARSAY & INTRO" REJECTION (Hook Strength)
+- SEVERE PENALTY for "They say that..." (ऐसे कहते हैं कि...), "A lot of people think...", or general observations. These are Secondary Hooks.
+- DEDUCT Points for "Hi I'm..." or "Wait for the end."
+- REWARD Active Authority: Defiant opinions, "Underrated" claims, or direct "Truths" that break logic.
 
-Return a valid JSON object ONLY. The object MUST contain:
-- viralityScore (number 0–100, rounded to nearest integer)
-- breakdown (object with keys: hook_strength, clarity, incongruency, simplicity, emotional_trigger, retention, shareability, personal_touch, takeaway_cta — each 0–100)
-- feedback (string, exactly 2 sentences summarizing viral potential)
-- redFlags (array of strings, exactly 3 critical weaknesses)
-- strengths (array of strings, exactly 3 genuine strategic positives)
-- language (string, detected language name)`;
+3. THE LECTURE TRAP AUDIT (Friction vs. Flow)
+- Look for academic fillers or news-report storytelling. (PENALIZE).
+- Content must feel like "sharing a secret," not "teaching a lesson." "Teaching" feels like a chore; "Secrets" feel like status advancement.
 
-    // 1. PRIMARY: Try Google Gemini (Official SDK)
-    const geminiKey = process.env.GOOGLE_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY;
-    if (geminiKey) {
+4. TOPIC SATURATION & THE "FLIP" (Clarity/Incongruency)
+- Common Knowledge Penalty: Don't tell us AI is dangerous or money is good.
+- Reward the "Flip": A counter-intuitive insight that subverts the obvious.
+
+5. SOCIAL CURRENCY THEORY (Shareability)
+- Does sharing this make the viewer look smart/insider/funny? 
+- If it's just "warm" or "nice," it has ZERO share impulse. 
+
+6. CRITERIA BREAKDOWN:
+- Hook Strength: Pattern interrupts and tension in the first 3s.
+- Clarity: Premise delivered within 8s.
+- Incongruency: Strategic mismatch or twist.
+- Simplicity: Frictionless and cognitively light language.
+- Emotional Trigger: High-intensity triggers (Awe, Anger, Humor) over mild vibes.
+- Personal Touch: Niche-coded language and identity resonance.
+- Retention Potential: Narrative turns and micro-hooks.
+- Shareability: Identity weaponization and status reward.
+- Takeaway & CTA: Punchy, non-vague closing.
+
+MULTILINGUAL RULES:
+- Detect the language (e.g., Hinglish, Slang). Use local cultural nuance to judge the "vibe," but provide analysis in English.
+
+SCORING RULES:
+- Be deterministic and pessimistic. Scores above 85 are rare.
+- WEIGHTED FORMULA:
+  Hook ×2.0, Clarity ×2.0, Incongruency ×1.5, Simplicity ×1.5, Emotional Trigger ×1.5, Retention ×1.5, Shareability ×1.5, Personal Touch ×1.0, Takeaway ×0.5.
+
+Return a valid JSON object ONLY:
+{
+  "thinking": "1-2 sentence ruthless strategic audit logic.",
+  "viralityScore": 0-100,
+  "breakdown": { "hook_strength": 0-100, "clarity": 0-100, "incongruency": 0-100, "simplicity": 0-100, "emotional_trigger": 0-100, "retention": 0-100, "shareability": 0-100, "personal_touch": 0-100, "takeaway_cta": 0-100 },
+  "feedback": "2 sentences summarizing viral potential.",
+  "redFlags": ["3 weaknesses sorted by severity"],
+  "strengths": ["3 strategic positives sorted by impact"],
+  "language": "Language name"
+}
+`;
+
+    let aiResult;
+
+    // 1. PRIMARY: OpenAI (GPT-4o)
+    if (process.env.OPENAI_API_KEY) {
       try {
-        const text = await fetchWithRetry(async () => {
-          const genAI = new GoogleGenerativeAI(geminiKey);
-          const model = genAI.getGenerativeModel({
-            model: "gemini-2.0-flash",
-            generationConfig: { temperature: 0 }
-          });
-          const result = await model.generateContent(prompt);
-          return result.response.text();
-        });
+        const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+        const completion = await fetchWithRetry(() => openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: [
+            { role: "system", content: prompt.replace(`Analyze this short-form script or content: "${content}".`, "").trim() },
+            { role: "user", content: `Analyze this short-form script or content: "${content}".` }
+          ],
+          response_format: { type: "json_object" },
+          temperature: 0.9
+        }));
 
-        // Clean up markdown blocks if present
-        const jsonText = text.replace(/```json\n?|\n?```/g, "").trim();
-        return Response.json(JSON.parse(jsonText));
+        const text = completion.choices[0].message.content || "{}";
+        aiResult = JSON.parse(text);
 
-      } catch (geminiError) {
-        console.warn("Gemini Primary Failed, switching to fallback:", geminiError);
-        // Continue to fallback
+      } catch (openaiError) {
+        console.warn("OpenAI Primary Failed, switching to fallback:", openaiError);
       }
     }
 
     // 2. SECONDARY: OpenRouter Fallback
-    console.log("Using OpenRouter Fallback...");
-    const aiContent = await fetchWithRetry(async () => {
-      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          "model": "google/gemini-2.0-flash-001",
-          "messages": [{ "role": "user", "content": prompt }],
-          "temperature": 0,
-          "response_format": { "type": "json_object" }
-        })
+    if (!aiResult) {
+      console.log("Using OpenRouter Fallback...");
+      const aiContent = await fetchWithRetry(async () => {
+        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            "model": "openai/gpt-4o",
+            "messages": [
+              { "role": "system", "content": prompt.replace(`Analyze this short-form script/transcript: "${content}".`, "").trim() },
+              { "role": "user", "content": `Analyze this short-form script/transcript: "${content}".` }
+            ],
+            "temperature": 0.7,
+            "response_format": { "type": "json_object" }
+          })
+        });
+
+        if (!response.ok) {
+          const errText = await response.text();
+          if (response.status === 429) throw new Error("429 Too Many Requests");
+          throw new Error(`OpenRouter Failed: ${errText}`);
+        }
+
+        const data = await response.json();
+        return JSON.parse(data.choices[0].message.content);
       });
+      aiResult = aiContent;
+    }
 
-      if (!response.ok) {
-        const errText = await response.text();
-        if (response.status === 429) throw new Error("429 Too Many Requests");
-        throw new Error(`OpenRouter Failed: ${errText}`);
-      }
+    // 3. SAVE TO HISTORY
+    if (userId && aiResult) {
+      const { error: saveError } = await supabaseAdmin.from('audit_history').insert({
+        user_id: userId,
+        content: content,
+        score: aiResult.viralityScore,
+        result: aiResult
+      });
+      if (saveError) console.error("Failed to save audit history:", saveError);
+    }
 
-      const data = await response.json();
-      return JSON.parse(data.choices[0].message.content);
-    });
-
-    return Response.json(aiContent);
+    return NextResponse.json(aiResult);
 
   } catch (error: any) {
     console.error("Critical Failure (All Providers):", error);
-    return Response.json({
+    return NextResponse.json({
       viralityScore: 0,
+      thinking: "Error occurred",
       breakdown: {
         hook_strength: 0,
         clarity: 0,

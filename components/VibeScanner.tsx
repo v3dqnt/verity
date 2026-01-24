@@ -1,15 +1,41 @@
 "use client";
-import { useState } from 'react';
-import { Zap, ShieldAlert, Sparkles, Loader2, Globe, BarChart3, Info } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Zap, ShieldAlert, Sparkles, Loader2, Globe, BarChart3, Info, History, X, BrainCircuit, Clock } from 'lucide-react';
 import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
-  ResponsiveContainer, PieChart, Pie, Cell, Tooltip
+  ResponsiveContainer
 } from 'recharts';
+import { supabase } from '@/lib/supabase';
 
 export function VibeScanner() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
+  const [history, setHistory] = useState<any[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [showThinking, setShowThinking] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [activeCriteria, setActiveCriteria] = useState<string | null>(null);
+  const [criterionLoading, setCriterionLoading] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        setUserId(data.user.id);
+        fetchHistory(data.user.id);
+      }
+    });
+  }, []);
+
+  const fetchHistory = async (uid: string) => {
+    try {
+      const res = await fetch(`/api/ai/trust-score?userId=${uid}`);
+      const data = await res.json();
+      if (data.history) setHistory(data.history);
+    } catch (e) {
+      console.error("Failed to fetch history");
+    }
+  };
 
   const handleScan = async () => {
     if (!input) return;
@@ -18,10 +44,11 @@ export function VibeScanner() {
       const res = await fetch('/api/ai/trust-score', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: input }),
+        body: JSON.stringify({ content: input, userId }), // Pass userId for saving/deduping
       });
       const data = await res.json();
       setResult(data);
+      if (userId) fetchHistory(userId); // Refresh history
     } catch (err) {
       alert("Analysis failed. System busy.");
     } finally {
@@ -29,8 +56,102 @@ export function VibeScanner() {
     }
   };
 
+  const handleCriterionClick = async (key: string, label: string) => {
+    // If already open, close it
+    if (activeCriteria === key) {
+      setActiveCriteria(null);
+      return;
+    }
+
+    // Set active first to expand UI immediately
+    setActiveCriteria(key);
+
+    // If we already have the reasoning in the result (from a previous on-demand fetch), don't fetch again
+    if (result.reasoning?.[key]) return;
+
+    // Fetch on-demand
+    setCriterionLoading(key);
+    try {
+      const res = await fetch('/api/ai/trust-score/explain', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: input,
+          criterion: label,
+          score: result.breakdown[key],
+          totalScore: result.viralityScore
+        }),
+      });
+      const data = await res.json();
+
+      // Update the result object with the new reasoning
+      setResult((prev: any) => ({
+        ...prev,
+        reasoning: {
+          ...(prev.reasoning || {}),
+          [key]: data.reasoning
+        }
+      }));
+    } catch (err) {
+      console.error("Failed to fetch reasoning");
+    } finally {
+      setCriterionLoading(null);
+    }
+  };
+
+  const loadFromHistory = (item: any) => {
+    setResult(item.result);
+    setInput(item.content);
+    setShowHistory(false);
+    setActiveCriteria(null);
+    setCriterionLoading(null);
+  };
+
   return (
-    <div className="space-y-10">
+    <div className="space-y-10 relative">
+
+      {/* HISTORY MODAL */}
+      {showHistory && (
+        <div className="fixed inset-0 z-50 flex items-center justify-end bg-black/50 backdrop-blur-sm" onClick={() => setShowHistory(false)}>
+          <div className="w-full max-w-md h-full bg-zinc-900 border-l border-white/10 p-8 overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-8">
+              <h2 className="text-2xl font-black italic uppercase">Audit History</h2>
+              <button onClick={() => setShowHistory(false)} className="hover:text-emerald-500"><X /></button>
+            </div>
+            <div className="space-y-4">
+              {history.map((item: any) => (
+                <div key={item.id} onClick={() => loadFromHistory(item)} className="p-4 bg-zinc-800/50 rounded-xl border border-white/5 hover:border-emerald-500/50 cursor-pointer transition-all group">
+                  <div className="flex justify-between items-start mb-2">
+                    <span className={`text-xl font-black ${item.score >= 80 ? 'text-emerald-500' : item.score >= 50 ? 'text-yellow-500' : 'text-zinc-500'}`}>
+                      {item.score}/100
+                    </span>
+                    <span className="text-[10px] text-zinc-500 font-mono">{new Date(item.created_at).toLocaleDateString()}</span>
+                  </div>
+                  <p className="text-xs text-zinc-400 line-clamp-2 font-mono">{item.content}</p>
+                </div>
+              ))}
+              {history.length === 0 && <p className="text-zinc-500 italic">No past audits found.</p>}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* THINKING MODAL */}
+      {showThinking && result?.thinking && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md" onClick={() => setShowThinking(false)}>
+          <div className="max-w-2xl w-full bg-zinc-900 border border-white/10 rounded-3xl p-8 m-4 shadow-2xl relative" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setShowThinking(false)} className="absolute top-6 right-6 hover:text-emerald-500"><X /></button>
+            <div className="flex items-center gap-3 mb-6 text-emerald-500">
+              <BrainCircuit size={24} />
+              <h3 className="font-mono uppercase tracking-widest text-sm">AI Thinking Process</h3>
+            </div>
+            <div className="prose prose-invert max-w-none">
+              <p className="text-lg leading-relaxed text-zinc-300 whitespace-pre-wrap">{result.thinking}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 1. INPUT BOX */}
       <div className="bg-zinc-900/50 border border-white/10 rounded-[2rem] p-8 shadow-2xl backdrop-blur-md">
         <textarea
@@ -39,11 +160,21 @@ export function VibeScanner() {
           placeholder="Paste script here (e.g., 'What's up besties, we are so back with a new drop...')"
           className="w-full h-48 bg-transparent text-white text-xl placeholder-zinc-700 outline-none resize-none leading-relaxed"
         />
-        <div className="flex justify-end mt-4">
+        <div className="flex justify-between mt-4">
+          {/* HISTORY TOGGLE */}
+          {userId && (
+            <button
+              onClick={() => setShowHistory(true)}
+              className="text-zinc-500 hover:text-white flex items-center gap-2 px-4 py-2 rounded-xl transition-colors text-sm font-mono uppercase tracking-widest"
+            >
+              <History size={16} /> Past Audits ({history.length})
+            </button>
+          )}
+
           <button
             onClick={handleScan}
             disabled={loading || !input}
-            className="bg-emerald-500 hover:bg-emerald-400 text-black font-black py-4 px-10 rounded-2xl flex items-center gap-3 transition-all active:scale-95 disabled:opacity-30"
+            className="bg-emerald-500 hover:bg-emerald-400 text-black font-black py-4 px-10 rounded-2xl flex items-center gap-3 transition-all active:scale-95 disabled:opacity-30 ml-auto"
           >
             {loading ? <Loader2 className="animate-spin" /> : <Zap size={20} className="fill-current" />}
             {loading ? "SCANNING ENCRYPTIONS..." : "START AUDIT"}
@@ -60,7 +191,17 @@ export function VibeScanner() {
 
             {/* MAIN SCORE & FEEDBACK */}
             <div className="lg:col-span-2 bg-zinc-900/80 border border-white/5 p-10 rounded-[3rem] backdrop-blur-sm relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-8">
+              <div className="absolute top-0 right-0 p-8 flex gap-3">
+                {/* THINKING BUTTON */}
+                {result.thinking && (
+                  <button
+                    onClick={() => setShowThinking(true)}
+                    className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-4 py-1.5 rounded-full hover:bg-emerald-500/20 transition-colors cursor-pointer"
+                  >
+                    <BrainCircuit size={12} className="text-emerald-500" />
+                    <span className="text-[10px] font-mono text-emerald-500 uppercase tracking-widest">View Logic</span>
+                  </button>
+                )}
                 <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-4 py-1.5 rounded-full">
                   <Globe size={12} className="text-emerald-500" />
                   <span className="text-[10px] font-mono text-emerald-500 uppercase tracking-widest">{result.language || "Universal"}</span>
@@ -68,7 +209,7 @@ export function VibeScanner() {
               </div>
 
               <div className="flex flex-col md:flex-row items-center gap-12">
-                <div className="relative">
+                <div className="relative cursor-pointer group-hover:scale-105 transition-transform" onClick={() => result.thinking && setShowThinking(true)} title="Click to see AI thinking">
                   <div className="w-48 h-48 rounded-full border-4 border-emerald-500/20 flex items-center justify-center relative">
                     <div className="text-6xl font-black text-white italic">
                       {result.viralityScore}<span className="text-emerald-500 text-3xl">/100</span>
@@ -86,7 +227,7 @@ export function VibeScanner() {
                       />
                     </svg>
                   </div>
-                  <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-[0.3em] text-center mt-6">Audit Score</p>
+                  <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-[0.3em] text-center mt-6 group-hover:text-emerald-400 transition-colors">Audit Score</p>
                 </div>
 
                 <div className="flex-1 space-y-4">
@@ -191,19 +332,44 @@ export function VibeScanner() {
                 { label: 'Personal Touch', key: 'personal_touch', color: 'teal' },
                 { label: 'Takeaway & CTA', key: 'takeaway_cta', color: 'orange' },
               ].map((item) => (
-                <div key={item.key} className="bg-zinc-900/30 border border-white/5 p-6 rounded-2xl flex items-center justify-between group hover:border-white/10 transition-colors">
-                  <div>
-                    <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-1">{item.label}</p>
-                    <div className="h-1.5 w-48 bg-white/5 rounded-full mt-2 overflow-hidden">
-                      <div
-                        className="h-full bg-emerald-500 transition-all duration-1000 ease-out"
-                        style={{ width: `${result.breakdown[item.key]}%` }}
-                      />
+                <div
+                  key={item.key}
+                  onClick={() => handleCriterionClick(item.key, item.label)}
+                  className={`bg-zinc-900/30 border ${activeCriteria === item.key ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-white/5'} p-6 rounded-2xl cursor-pointer hover:border-white/10 transition-all`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-1">{item.label}</p>
+                      <div className="h-1.5 w-48 bg-white/5 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-emerald-500 transition-all duration-1000 ease-out"
+                          style={{ width: `${result.breakdown[item.key]}%` }}
+                        />
+                      </div>
+                    </div>
+                    <div className="text-3xl font-black text-white italic">
+                      {result.breakdown[item.key]}<span className="text-zinc-600 text-sm ml-1"> pts</span>
                     </div>
                   </div>
-                  <div className="text-3xl font-black text-white italic">
-                    {result.breakdown[item.key]}<span className="text-zinc-600 text-sm ml-1"> pts</span>
-                  </div>
+                  {activeCriteria === item.key && (
+                    <div className="mt-4 p-4 bg-black/40 rounded-xl border border-emerald-500/20 animate-in fade-in slide-in-from-top-2 duration-300">
+                      <div className="flex items-center gap-2 mb-1 text-red-400">
+                        <ShieldAlert size={12} />
+                        <span className="text-[8px] font-mono uppercase tracking-widest font-bold">Deduction Reason</span>
+                      </div>
+                      {criterionLoading === item.key ? (
+                        <div className="flex items-center gap-2 text-zinc-500 text-[10px] font-mono animate-pulse">
+                          <Loader2 size={10} className="animate-spin" /> GENERATING ANALYTICS...
+                        </div>
+                      ) : result.reasoning?.[item.key] ? (
+                        <p className="text-xs text-zinc-300 leading-relaxed italic">
+                          "{result.reasoning[item.key]}"
+                        </p>
+                      ) : (
+                        <p className="text-xs text-zinc-500 italic">No breakdown available.</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
