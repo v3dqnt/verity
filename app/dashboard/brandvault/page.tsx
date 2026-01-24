@@ -5,6 +5,7 @@ import { ArrowLeft, Plus, Trash2, Edit3, Save, Globe, X, Upload, Loader2, ArrowR
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from "next/navigation";
 import { supabase } from '@/lib/supabase';
+import BrandOnboarding from '@/components/BrandOnboarding';
 
 // --- BACKGROUND COMPONENTS ---
 
@@ -57,7 +58,19 @@ export default function BrandVault() {
     target_audience: "",
     tone_voice: "Authentic & Bold",
     mission_brief: "",
-    logo_url: ""
+    logo_url: "",
+    entity_type: 'brand',
+    target_age_groups: [],
+    competitors: [],
+    social_links: {
+      website: '',
+      instagram: '',
+      tiktok: '',
+      twitter: ''
+    },
+    visual_aesthetic: '',
+    content_samples: [],
+    product_analysis: []
   });
 
   useEffect(() => {
@@ -104,27 +117,61 @@ export default function BrandVault() {
       target_audience: brand.target_audience,
       tone_voice: brand.tone_voice,
       mission_brief: brand.mission_brief,
-      logo_url: brand.logo_url || ""
+      logo_url: brand.logo_url || "",
+      entity_type: brand.entity_type || 'brand',
+      target_age_groups: brand.target_age_groups || [],
+      competitors: brand.competitors || [],
+      social_links: brand.social_links || { website: '', instagram: '', tiktok: '', twitter: '' },
+      visual_aesthetic: brand.visual_aesthetic || '',
+      content_samples: brand.content_samples || [],
+      product_analysis: brand.product_analysis || []
     });
     setEditingId(brand.id);
     setModalMode('edit');
   };
 
-  const handleSubmit = async () => {
+  const handleOnboardingComplete = async (data: any) => {
     const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
     if (modalMode === 'create') {
-      const { error } = await supabase.from('briefs').insert([{ ...formData, user_id: session?.user.id }]);
-      if (!error) closeAndRefresh();
+      const { error } = await supabase.from('briefs').insert([{ ...data, user_id: session.user.id }]);
+      if (error) {
+        console.error("Insert Error:", error);
+        alert(`Failed to save: ${error.message}`);
+      } else {
+        closeAndRefresh();
+      }
     } else if (modalMode === 'edit' && editingId) {
-      const { error } = await supabase.from('briefs').update(formData).eq('id', editingId);
-      if (!error) closeAndRefresh();
+      const { error } = await supabase.from('briefs').update(data).eq('id', editingId);
+      if (error) {
+        console.error("Update Error:", error);
+        alert(`Failed to update: ${error.message}`);
+      } else {
+        closeAndRefresh();
+      }
     }
   };
 
   const closeAndRefresh = () => {
     setModalMode(null);
     setEditingId(null);
-    setFormData({ title: "", company_name: "", industry: "", target_audience: "", tone_voice: "Authentic & Bold", mission_brief: "", logo_url: "" });
+    setFormData({
+      title: "",
+      company_name: "",
+      industry: "",
+      target_audience: "",
+      tone_voice: "Authentic & Bold",
+      mission_brief: "",
+      logo_url: "",
+      entity_type: 'brand',
+      target_age_groups: [],
+      competitors: [],
+      social_links: { website: '', instagram: '', tiktok: '', twitter: '' },
+      visual_aesthetic: '',
+      content_samples: [],
+      product_analysis: []
+    });
     fetchBrands();
   };
 
@@ -227,69 +274,11 @@ export default function BrandVault() {
 
         <AnimatePresence>
           {modalMode && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/90 backdrop-blur-2xl flex items-center justify-center p-6">
-              <motion.div initial={{ scale: 0.95, y: 30 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 30 }} className="bg-[#080808] border border-white/10 p-12 rounded-[4rem] max-w-3xl w-full max-h-[90vh] overflow-y-auto relative">
-                <button onClick={() => setModalMode(null)} className="absolute top-8 right-8 text-zinc-500 hover:text-white"><X size={24} /></button>
-                <h2 className="text-5xl font-black italic uppercase tracking-tighter mb-10">
-                  {modalMode === 'create' ? 'Forge Identity' : 'Recalibrate Identity'}
-                </h2>
-
-                <div className="mb-10 flex flex-col items-center">
-                  <label className="relative group cursor-pointer">
-                    <div className="h-32 w-32 rounded-[2rem] bg-white/5 border-2 border-dashed border-white/10 flex flex-col items-center justify-center overflow-hidden group-hover:border-emerald-500/50 transition-all">
-                      {uploading ? (
-                        <Loader2 className="animate-spin text-emerald-500" />
-                      ) : formData.logo_url ? (
-                        <img src={formData.logo_url} className="w-full h-full object-cover" alt="Preview" />
-                      ) : (
-                        <>
-                          <Upload className="text-zinc-500 group-hover:text-emerald-500 mb-2" size={24} />
-                          <span className="text-[8px] font-mono uppercase text-zinc-500 tracking-tighter">Upload Logo</span>
-                        </>
-                      )}
-                    </div>
-                    <input type="file" className="hidden" accept="image/*" onChange={handleLogoUpload} />
-                  </label>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-mono uppercase text-zinc-500 ml-4 tracking-widest">Company / Brand Name</label>
-                    <input type="text" className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-sm focus:border-emerald-500 outline-none transition-all" value={formData.company_name} onChange={e => setFormData({ ...formData, company_name: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-mono uppercase text-zinc-500 ml-4 tracking-widest">Strategy Label</label>
-                    <input type="text" className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-sm focus:border-emerald-500 outline-none transition-all" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-mono uppercase text-zinc-500 ml-4 tracking-widest">Industry Segment</label>
-                    <input type="text" className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-sm focus:border-emerald-500 outline-none transition-all" value={formData.industry} onChange={e => setFormData({ ...formData, industry: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-mono uppercase text-zinc-500 ml-4 tracking-widest">Voice Archetype</label>
-                    <select className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-sm focus:border-emerald-500 outline-none transition-all appearance-none" value={formData.tone_voice} onChange={e => setFormData({ ...formData, tone_voice: e.target.value })}>
-                      <option>Authentic & Bold</option>
-                      <option>Sophisticated & Minimal</option>
-                      <option>High-Energy & Chaotic</option>
-                      <option>Dark & Cinematic</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="space-y-2 mb-10">
-                  <label className="text-[9px] font-mono uppercase text-zinc-500 ml-4 tracking-widest">Brand DNA & Context</label>
-                  <textarea rows={5} className="w-full bg-white/5 border border-white/10 rounded-[2rem] p-6 text-sm focus:border-emerald-500 outline-none transition-all resize-none" value={formData.mission_brief} onChange={e => setFormData({ ...formData, mission_brief: e.target.value })} />
-                </div>
-
-                <div className="flex gap-4">
-                  <button onClick={() => setModalMode(null)} className="flex-1 border border-white/10 py-5 rounded-2xl font-bold uppercase text-xs tracking-widest hover:bg-white/5 transition-all">Abort</button>
-                  <button onClick={handleSubmit} disabled={uploading} className="flex-2 bg-emerald-500 text-black py-5 rounded-2xl font-black uppercase italic tracking-tighter hover:bg-emerald-400 transition-all shadow-[0_10px_30px_rgba(16,185,129,0.3)] flex items-center justify-center gap-3 disabled:opacity-50">
-                    {uploading ? <Loader2 className="animate-spin" /> : <Save size={18} />}
-                    {modalMode === 'create' ? 'Commit to Vault' : 'Sync Changes'}
-                  </button>
-                </div>
-              </motion.div>
-            </motion.div>
+            <BrandOnboarding
+              onClose={() => setModalMode(null)}
+              onComplete={handleOnboardingComplete}
+              initialData={modalMode === 'edit' ? formData : null}
+            />
           )}
         </AnimatePresence>
       </motion.div>
