@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef, useCallback, memo } from 'react';
-import { Search, Loader2, Home, Send, Sparkles, Database, ExternalLink, BookmarkPlus, CheckCircle, X, Trash2, ArrowBigLeft, ArrowLeft } from 'lucide-react';
+import { Search, Loader2, Home, Send, Sparkles, Database, ExternalLink, BookmarkPlus, CheckCircle, X, Trash2, ArrowBigLeft, ArrowLeft, Globe, Copy, FileText } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { supabase } from "@/lib/supabase";
@@ -42,10 +42,18 @@ export default function SignalRadar() {
   const [searchInput, setSearchInput] = useState('');
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [vaultTrends, setVaultTrends] = useState<any[]>([]);
+  const [modelThinking, setModelThinking] = useState<string>('');
+  const [intelligenceData, setIntelligenceData] = useState<any>(null);
 
   const [chatInput, setChatInput] = useState('');
   const [chatHistory, setChatHistory] = useState<{ role: string, content: string }[]>([]);
   const [isTyping, setIsTyping] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [copiedPromptId, setCopiedPromptId] = useState<string | null>(null);
+
+  const [brands, setBrands] = useState<any[]>([]);
+  const [selectedBrandId, setSelectedBrandId] = useState<string>('');
+  const [showBrandSelector, setShowBrandSelector] = useState(false);
 
   // --- UPDATED AUTH & VAULT SYNC ---
 
@@ -54,13 +62,10 @@ export default function SignalRadar() {
     if (!session) return;
 
     try {
-      // Pass userId so the backend knows which vault to fetch
       const res = await fetch(`/api/ai/trends?userId=${session.user.id}`);
       if (!res.ok) return;
 
       const data = await res.json();
-      // 'posts' from the backend GET handler contains the latest trends + isSaved status
-      // We look for the 'data' property if the backend specifically returned a full vault fetch
       const permanentSaves = data.data || [];
 
       setVaultTrends(permanentSaves);
@@ -70,9 +75,20 @@ export default function SignalRadar() {
     }
   }, []);
 
+  const loadBrands = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    const { data, error } = await supabase
+      .from('briefs')
+      .select('*')
+      .eq('user_id', session.user.id);
+    if (!error) setBrands(data || []);
+  }, []);
+
   useEffect(() => {
     loadVault();
-  }, [loadVault]);
+    loadBrands();
+  }, [loadVault, loadBrands]);
 
   const toggleSave = async (e: React.MouseEvent, trend: any) => {
     e.stopPropagation();
@@ -117,17 +133,24 @@ export default function SignalRadar() {
   };
 
   const fetchSignals = useCallback(async (searchTerm = '', reset = false) => {
+    if (loading) return; // Prevent multiple requests
     setLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const userId = session?.user?.id || '';
 
       const query = searchTerm.trim() || "latest global tech and cultural breakthroughs";
-      // Send userId to backend so it can mark "isSaved" accurately
-      const res = await fetch(`/api/ai/trends?q=${encodeURIComponent(query)}&userId=${userId}`);
+      // Send userId and brandId to backend
+      const res = await fetch(`/api/ai/trends?q=${encodeURIComponent(query)}&userId=${userId}&brandId=${selectedBrandId}`);
 
-      if (!res.ok) throw new Error("Connection Failed");
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `Server Error ${res.status}`);
+      }
       const data = await res.json();
+      console.log("Radar Data:", data);
+
+      if (data.thinking) setModelThinking(data.thinking);
 
       if (reset) setTrends(data.posts || []);
       else setTrends(prev => [...prev, ...(data.posts || [])]);
@@ -136,11 +159,9 @@ export default function SignalRadar() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedBrandId, loading]); // Added dependencies
 
-  useEffect(() => {
-    fetchSignals(searchInput, true);
-  }, []); // Run once on mount
+
 
   const removeTrend = async (e: React.MouseEvent, trendName: string) => {
     e.stopPropagation();
@@ -175,6 +196,30 @@ export default function SignalRadar() {
     } finally { setIsTyping(false); }
   };
 
+  const generateOrchestratorPrompt = (trend: any) => {
+    const prompt = `Create a viral ${trend.platform || 'Instagram'} ${trend.platform === 'YouTube' ? 'Short' : 'Reel'} script based on this trending format:
+
+TREND: ${trend.name}
+VIRALITY SCORE: ${trend.score}%
+VELOCITY: ${trend.status}
+
+FORMAT BREAKDOWN:
+${trend.ugc_strategy?.format_explanation || trend.desc}
+
+DESCRIPTION:
+${trend.desc}
+
+REFERENCE EXAMPLES:
+${trend.example_urls?.slice(0, 3).map((url: string, i: number) => `${i + 1}. ${url}`).join('\n') || 'No examples available'}
+
+Please create a script that follows this exact format and structure, optimized for maximum engagement and virality.`;
+
+    navigator.clipboard.writeText(prompt);
+    setCopiedPromptId(trend.name);
+    setTimeout(() => setCopiedPromptId(null), 2000);
+  };
+
+
   return (
     <main className="min-h-screen bg-[#020202] text-white p-6 md:p-12 relative overflow-x-hidden font-sans selection:bg-emerald-500 selection:text-black">
       <Stars />
@@ -193,75 +238,277 @@ export default function SignalRadar() {
           </button>
         </nav>
 
-        <header className="flex flex-col md:flex-row justify-between items-end mb-16 gap-8">
-          <div>
-            <h1 className="text-6xl md:text-8xl font-black italic uppercase tracking-tighter leading-none">
-              Trend <span className="text-emerald-500">/</span> Radar
-            </h1>
-            <p className="text-zinc-500 font-mono text-[10px] uppercase tracking-[0.4em] mt-4">Intelligent Feed</p>
-          </div>
+        <header className="mb-20">
+          <div className="flex flex-col gap-12">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-10">
+              <div className="space-y-4">
+                <h1 className="text-6xl md:text-8xl font-black italic uppercase tracking-tighter leading-none mb-4">
+                  Trend <span className="text-emerald-500">/</span> Radar
+                </h1>
+                <div className="flex items-center gap-3">
+                  <p className="text-zinc-500 font-mono text-[10px] uppercase tracking-[0.4em]">Intent-Based Discovery</p>
+                </div>
+              </div>
 
-          <div className="relative w-full md:w-96">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600" size={18} />
-            <input
-              type="text"
-              placeholder="Search breakthroughs..."
-              className="w-full liquid-glass rounded-2xl py-5 pl-12 pr-4 outline-none focus:border-emerald-500/40 text-sm transition-all text-white placeholder:text-zinc-700"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') fetchSignals(searchInput, true);
-              }}
-            />
+              {/* Brand Context Chips */}
+              <div className="flex flex-col gap-3 w-full lg:w-auto">
+                <label className="text-[10px] font-mono uppercase text-zinc-500 tracking-[0.4em] ml-4 flex items-center gap-2">
+                  <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" /> 01. Brand Context
+                </label>
+                <div className="flex gap-2 p-1.5 liquid-glass rounded-full border border-white/5 overflow-x-auto scrollbar-hide max-w-full lg:max-w-[500px]">
+                  <button
+                    onClick={() => setSelectedBrandId('')}
+                    className={`shrink-0 px-6 py-3 rounded-full text-[10px] font-black uppercase transition-all tracking-widest ${!selectedBrandId ? 'bg-white text-black' : 'text-zinc-500 hover:text-white'
+                      }`}
+                  >
+                    General
+                  </button>
+                  {brands.map((brand) => (
+                    <button
+                      key={brand.id}
+                      onClick={() => setSelectedBrandId(brand.id)}
+                      className={`shrink-0 flex items-center gap-3 px-6 py-3 rounded-full border transition-all ${selectedBrandId === brand.id ? 'bg-emerald-500 text-black border-emerald-400' : 'bg-white/5 text-zinc-400 border-white/5 hover:border-white/20 hover:text-white'
+                        }`}
+                    >
+                      {brand.logo_url && (
+                        <div className="h-5 w-5 rounded-full overflow-hidden bg-zinc-800 border border-white/10 shrink-0">
+                          <img src={brand.logo_url} className="w-full h-full object-cover" alt="" />
+                        </div>
+                      )}
+                      <span className="text-[10px] font-black uppercase italic tracking-tighter whitespace-nowrap">{brand.company_name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Giant Intent Input */}
+            <div className="relative group">
+              <div className="absolute -inset-1 bg-linear-to-r from-emerald-500/20 to-transparent rounded-[3rem] blur opacity-25 group-focus-within:opacity-100 transition duration-1000" />
+              <div className="relative liquid-glass p-2 rounded-[3rem] flex flex-col md:flex-row gap-2 w-full shadow-2xl border border-white/10 focus-within:border-emerald-500/40 transition-all backdrop-blur-3xl">
+                <div className="flex-1 flex items-center">
+                  <div className="px-8 text-emerald-500 border-r border-white/10 hidden md:block">
+                    <Sparkles size={24} className="animate-pulse" />
+                  </div>
+                  <input
+                    className="flex-1 bg-transparent px-8 py-8 outline-none text-2xl md:text-3xl font-medium italic placeholder:text-zinc-800 text-white min-w-0"
+                    placeholder="Describe what you want to create..."
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') fetchSignals(searchInput, true);
+                    }}
+                  />
+                </div>
+                <button
+                  onClick={() => fetchSignals(searchInput, true)}
+                  disabled={loading || !searchInput.trim()}
+                  className="bg-emerald-500 text-black px-12 py-6 rounded-full font-black uppercase italic flex items-center justify-center gap-3 disabled:opacity-20 transition-all hover:scale-[1.02] active:scale-95 shadow-[0_0_30px_rgba(16,185,129,0.2)]"
+                >
+                  {loading ? <Loader2 className="animate-spin text-black" size={24} /> : <Search size={24} />}
+                  <span className="hidden md:inline">Find Peaking Signals</span>
+                </button>
+              </div>
+
+            </div>
           </div>
         </header>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {trends.map((trend) => (
-            <motion.div
-              key={trend.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              whileHover={{ y: -5, scale: 1.02 }}
-              onClick={() => { setSelectedTopic(trend); setChatHistory([]); }}
-              className="liquid-glass relative overflow-hidden rounded-[3.5rem] cursor-pointer group flex flex-col h-full p-10
-                transition-all duration-500 ease-out
-                hover:shadow-[0_8px_32px_0_rgba(16,185,129,0.3),inset_0_1px_0_rgba(255,255,255,0.3)]"
-            >
-              {/* Inner glow layer */}
-              <div className="absolute inset-0 rounded-[3.5rem] bg-[radial-gradient(circle_at_30%_20%,rgba(16,185,129,0.15),transparent_60%)] opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+        {intelligenceData && (
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-16"
+          >
+            <div className="flex items-center gap-4 mb-8">
+              <div className="h-px flex-1 bg-white/10" />
+              <h2 className="text-[10px] font-mono uppercase tracking-[0.5em] text-emerald-500 whitespace-nowrap">Industry Content Intelligence</h2>
+              <div className="h-px flex-1 bg-white/10" />
+            </div>
 
-              <div className="relative z-10 flex flex-col h-full">
-                <div className="flex justify-between items-start mb-8">
-                  <span className="bg-emerald-500/20 backdrop-blur-md text-emerald-400 text-[9px] font-mono px-4 py-1.5 rounded-full uppercase border border-emerald-500/30 shadow-lg shadow-emerald-500/10">
-                    {trend.category || "General"}
-                  </span>
-                  <button onClick={(e) => toggleSave(e, trend)} className="relative z-20">
-                    {savedIds.has(trend.name) ?
-                      <CheckCircle className="text-emerald-500 drop-shadow-lg" size={22} /> :
-                      <BookmarkPlus className="text-zinc-400 hover:text-emerald-400 transition-colors drop-shadow-md" size={22} />
-                    }
-                  </button>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+              {[
+                { title: 'Video Formats', data: intelligenceData.videoFormats, icon: '🎬' },
+                { title: 'Peaking Challenges', data: intelligenceData.challenges, icon: '🏆' },
+                { title: 'Viral Hashtags', data: intelligenceData.hashtags, icon: '＃' },
+                { title: 'Trending Sounds', data: intelligenceData.audios, icon: '🎵' }
+              ].map(cat => (
+                <div key={cat.title} className="liquid-glass p-6 rounded-[2rem] border border-white/5 flex flex-col h-full bg-white/[0.02]">
+                  <div className="flex items-center gap-3 mb-6">
+                    <span className="text-xl">{cat.icon}</span>
+                    <h3 className="text-[9px] font-mono uppercase tracking-widest text-zinc-400">{cat.title}</h3>
+                  </div>
+                  <div className="text-[11px] text-zinc-300 leading-relaxed whitespace-pre-wrap font-medium h-[200px] overflow-y-auto custom-scrollbar pr-2">
+                    {cat.data || "Locating real-time signals..."}
+                  </div>
                 </div>
-                <h3 className="text-2xl font-black italic uppercase text-white mb-6 leading-tight group-hover:text-emerald-400 transition-colors drop-shadow-lg">
-                  {trend.name || "Unknown Signal"}
-                </h3>
-                <p className="text-zinc-300/80 text-xs italic mb-8 line-clamp-3 leading-relaxed drop-shadow-md">{trend.desc}</p>
-                <div className="mt-auto pt-6 border-t border-white/10 flex items-center justify-between">
-                  <div><p className="text-[8px] text-zinc-400 uppercase mb-1 font-mono tracking-widest">Momentum</p><p className="text-xl font-black italic text-emerald-400 drop-shadow-lg">{trend.status}</p></div>
-                  <div className="text-right"><p className="text-[8px] text-zinc-400 uppercase mb-1 font-mono tracking-widest">Signal</p><p className="text-xl font-black italic text-white drop-shadow-lg">{trend.score}%</p></div>
+              ))}
+            </div>
+          </motion.section>
+        )}
+
+
+
+        <div className="space-y-12">
+          {trends.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="liquid-glass border border-white/10 rounded-[3rem] overflow-hidden shadow-2xl bg-black/40"
+            >
+              {/* MATRIX HEADER */}
+              <div className="bg-white/[0.03] border-b border-white/5 p-8 flex justify-between items-center">
+                <div className="flex items-center gap-4">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <h2 className="text-xl font-black italic uppercase tracking-tighter text-white">Systematic Intelligence Matrix</h2>
+                </div>
+                <div className="flex items-center gap-6">
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                    <span className="text-[8px] font-mono text-zinc-500 uppercase tracking-widest">YouTube</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                    <span className="text-[8px] font-mono text-zinc-500 uppercase tracking-widest">Instagram</span>
+                  </div>
                 </div>
               </div>
-            </motion.div>
-          ))}
-        </div>
 
-        {loading && (
-          <div className="py-20 flex flex-col items-center gap-4">
-            <Loader2 className="text-emerald-500 animate-spin" size={32} />
-            <p className="text-[9px] font-mono text-zinc-600 uppercase tracking-[0.3em]">Decoding Signals...</p>
-          </div>
-        )}
+              {/* STRATEGIC OVERVIEW SECTION */}
+              {modelThinking && (
+                <div className="p-8 border-b border-white/5 bg-emerald-500/[0.02]">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Sparkles size={16} className="text-emerald-500" />
+                    <span className="text-[9px] font-mono uppercase tracking-[0.4em] text-emerald-500">Master Strategic Inquest</span>
+                  </div>
+                  <p className="text-sm text-zinc-300 italic leading-relaxed max-w-5xl">
+                    {modelThinking}
+                  </p>
+                </div>
+              )}
+
+              {/* TREND LIST SECTION */}
+              <div className="divide-y divide-white/5">
+                {trends.map((trend, idx) => (
+                  <motion.div
+                    key={trend.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: idx * 0.1 }}
+                    className="group"
+                  >
+                    <div className="p-10 flex flex-col xl:flex-row gap-12 hover:bg-white/[0.01] transition-all">
+                      {/* Left Ident: Name & Score */}
+                      <div className="xl:w-1/4 space-y-6">
+                        <div className="flex items-center gap-3">
+                          <span className={`text-[10px] font-black px-4 py-1.5 rounded-full uppercase border ${trend.category?.toLowerCase() === 'youtube'
+                            ? 'bg-red-500/10 border-red-500/20 text-red-500'
+                            : 'bg-purple-500/10 border-purple-500/20 text-purple-400'
+                            }`}>
+                            {trend.category || "Social"}
+                          </span>
+                          <span className="text-white/20 font-mono text-xs">0{idx + 1}</span>
+                        </div>
+                        <h3 className="text-3xl font-black italic uppercase tracking-tighter text-white group-hover:text-emerald-400 transition-colors">
+                          {trend.name}
+                        </h3>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="bg-black/40 border border-white/5 p-4 rounded-2xl">
+                            <p className="text-[8px] text-zinc-500 uppercase font-mono tracking-widest mb-1">Velocity</p>
+                            <p className="text-lg font-black italic text-emerald-500">{trend.status}</p>
+                          </div>
+                          <div className="bg-black/40 border border-white/5 p-4 rounded-2xl">
+                            <p className="text-[8px] text-zinc-500 uppercase font-mono tracking-widest mb-1">Virality</p>
+                            <p className="text-lg font-black italic text-white">{trend.score}%</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={(e) => toggleSave(e, trend)}
+                          className="w-full flex items-center justify-center gap-2 py-4 rounded-xl border border-white/10 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all transition-all"
+                        >
+                          {savedIds.has(trend.name) ? <CheckCircle size={16} className="text-emerald-500" /> : <BookmarkPlus size={16} className="text-zinc-500" />}
+                          <span className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest">{savedIds.has(trend.name) ? 'Archived in Vault' : 'Archive Signal'}</span>
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); generateOrchestratorPrompt(trend); }}
+                          className="w-full flex items-center justify-center gap-2 py-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-500 hover:bg-emerald-500/10 transition-all group"
+                        >
+                          {copiedPromptId === trend.name ? (
+                            <>
+                              <CheckCircle size={16} className="text-emerald-500" />
+                              <span className="text-[9px] font-mono text-emerald-500 uppercase tracking-widest">Copied to Clipboard!</span>
+                            </>
+                          ) : (
+                            <>
+                              <FileText size={16} className="text-emerald-500 group-hover:scale-110 transition-transform" />
+                              <span className="text-[9px] font-mono text-emerald-500 uppercase tracking-widest">Generate Script Prompt</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+
+                      {/* Middle: Description & Strategy */}
+                      <div className="xl:flex-1 space-y-8">
+                        <div>
+                          <p className="text-[9px] font-mono uppercase text-zinc-600 tracking-[0.4em] mb-4">Master Breakdown</p>
+                          <p className="text-zinc-300 text-sm leading-relaxed italic border-l-2 border-emerald-500/20 pl-6">
+                            {trend.desc}
+                          </p>
+                        </div>
+
+                        <div className="bg-white/[0.03] border border-emerald-500/10 p-6 rounded-3xl">
+                          <p className="text-[8px] font-mono text-emerald-500 uppercase tracking-widest mb-3">Format Breakdown</p>
+                          <p className="text-xs text-zinc-300 leading-relaxed">
+                            {trend.ugc_strategy?.format_explanation || "Analyzing format structure..."}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Right: Sources & Interaction */}
+                      <div className="xl:w-1/4 flex flex-col gap-6">
+                        <div>
+                          <p className="text-[9px] font-mono uppercase text-zinc-600 tracking-[0.4em] mb-4">Signal Verification</p>
+                          <div className="space-y-2">
+                            {trend.example_urls?.slice(0, 2).map((url: string, i: number) => (
+                              <a key={i} href={url} target="_blank" rel="noreferrer" className="flex items-center justify-between bg-white/5 border border-white/10 hover:border-emerald-500 p-4 rounded-2xl group/link transition-all">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                                  <span className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest">Example {i + 1}</span>
+                                </div>
+                                <ExternalLink size={14} className="text-zinc-600 group-hover/link:text-emerald-500" />
+                              </a>
+                            ))}
+                            <a href={trend.link} target="_blank" rel="noreferrer" className="flex items-center justify-between border border-emerald-500/20 bg-emerald-500/5 p-4 rounded-2xl hover:bg-emerald-500 hover:text-black transition-all group/master">
+                              <span className="text-[9px] font-mono uppercase tracking-widest">Intelligence Audit</span>
+                              <Globe size={14} className="group-hover/master:translate-x-1 transition-transform" />
+                            </a>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => { setSelectedTopic(trend); setChatHistory([]); }}
+                          className="mt-auto bg-white/5 p-6 rounded-3xl border border-white/10 hover:border-white/30 text-center group/probe transition-all"
+                        >
+                          <Sparkles className="mx-auto mb-3 text-emerald-500 animate-pulse" size={20} />
+                          <span className="text-[10px] font-black uppercase italic tracking-tighter text-white">Full AI Signal Probe</span>
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {loading && (
+            <div className="py-40 flex flex-col items-center gap-6">
+              <div className="relative">
+                <div className="absolute inset-0 blur-2xl bg-emerald-500/40 animate-pulse rounded-full" />
+                <Loader2 className="text-emerald-500 animate-spin relative" size={48} />
+              </div>
+              <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-[0.6em] animate-pulse">Synchronizing Deep Content Intelligence...</p>
+            </div>
+          )}
+        </div>
       </div>
 
       <AnimatePresence>
@@ -331,9 +578,105 @@ export default function SignalRadar() {
                 <div className="bg-emerald-500/5 border border-emerald-500/10 p-6 rounded-[2rem] text-sm text-zinc-300 italic leading-relaxed mb-8">
                   {selectedTopic.desc || selectedTopic.raw_data?.desc}
                 </div>
-                <a href={selectedTopic.link} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-emerald-500 text-[10px] font-mono uppercase tracking-widest hover:underline decoration-emerald-500/50 underline-offset-4">
-                  <ExternalLink size={14} /> Intelligence Source
-                </a>
+
+                {/* SIGNAL EVIDENCE BAR */}
+                {(selectedTopic.source_evidence || selectedTopic.raw_data?.source_evidence) && (
+                  <div className="mb-8 p-6 liquid-glass border border-emerald-500/20 rounded-[2rem]">
+                    <p className="text-[8px] font-mono uppercase text-emerald-500 mb-3 tracking-[0.3em]">Signal Evidence</p>
+                    <p className="text-xs text-zinc-400 italic">
+                      {selectedTopic.source_evidence || selectedTopic.raw_data?.source_evidence}
+                    </p>
+                  </div>
+                )}
+
+                {/* REAL VIDEO EXAMPLES */}
+                {(selectedTopic.example_urls?.length > 0 || selectedTopic.raw_data?.example_urls?.length > 0) && (
+                  <div className="mb-8">
+                    <p className="text-[8px] font-mono uppercase text-zinc-500 mb-4 tracking-[0.3em] ml-2">Real Video Examples</p>
+                    <div className="grid grid-cols-1 gap-2">
+                      {(selectedTopic.example_urls || selectedTopic.raw_data?.example_urls)?.map((url: string, i: number) => (
+                        <a
+                          key={i}
+                          href={url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex items-center justify-between bg-white/5 border border-white/10 hover:border-emerald-500/30 p-4 rounded-2xl transition-all group"
+                        >
+                          <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest group-hover:text-emerald-400">Example {i + 1}</span>
+                          <ExternalLink size={14} className="text-zinc-600 group-hover:text-emerald-500 transition-colors" />
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* UGC STRATEGY SECTION */}
+                {(selectedTopic.ugc_strategy || selectedTopic.raw_data?.ugc_strategy) && (
+                  <div className="space-y-6 mb-8">
+                    {/* strategy content... same as before but checking raw_data too */}
+                    {(() => {
+                      const strategy = selectedTopic.ugc_strategy || selectedTopic.raw_data?.ugc_strategy;
+                      return (
+                        <>
+                          <div className="bg-white/5 border border-emerald-500/10 p-6 rounded-[2rem] relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 p-3">
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(strategy.format_explanation);
+                                  setCopied(true);
+                                  setTimeout(() => setCopied(false), 2000);
+                                }}
+                                className="bg-emerald-500 text-black px-3 py-1 rounded-full text-[8px] font-black uppercase italic tracking-tighter hover:bg-emerald-400 transition-all shadow-lg"
+                              >
+                                {copied ? 'Copied!' : 'Copy Format'}
+                              </button>
+                            </div>
+                            <p className="text-[8px] font-mono uppercase text-emerald-500 mb-3 tracking-widest">Format Breakdown</p>
+                            <p className="text-xs text-zinc-300 leading-relaxed italic pr-10">{strategy.format_explanation}</p>
+                          </div>
+
+                          <div className="flex flex-wrap gap-2">
+                            {strategy.key_slang?.map((s: string) => (
+                              <span key={s} className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[8px] font-mono px-3 py-1 rounded-full uppercase tracking-widest">
+                                #{s}
+                              </span>
+                            ))}
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+                )}
+
+                {/* SOURCES */}
+                <div className="space-y-3">
+                  <p className="text-[8px] font-mono uppercase text-zinc-500 tracking-[0.3em] ml-2">Intelligence Sources</p>
+                  <div className="flex flex-col gap-2">
+                    <a href={selectedTopic.link || `https://www.google.com/search?q=${encodeURIComponent(selectedTopic.topic || selectedTopic.name)}`} target="_blank" rel="noreferrer" className="flex items-center justify-between bg-white/5 border border-white/10 hover:border-emerald-500/30 p-4 rounded-2xl transition-all group">
+                      <div className="flex items-center gap-3">
+                        <Globe size={14} className="text-emerald-500" />
+                        <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Primary Intel Page</span>
+                      </div>
+                      <ExternalLink size={14} className="text-zinc-600 hover:text-emerald-500 transition-colors" />
+                    </a>
+
+                    {(selectedTopic.source_links || selectedTopic.raw_data?.source_links)?.map((link: string, i: number) => (
+                      <a
+                        key={i}
+                        href={link}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center justify-between bg-white/5 border border-white/10 hover:border-emerald-500/30 p-4 rounded-2xl transition-all group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Database size={14} className="text-zinc-500" />
+                          <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Reference {i + 1}</span>
+                        </div>
+                        <ExternalLink size={14} className="text-zinc-600 hover:text-emerald-500 transition-colors" />
+                      </a>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               <div className="md:w-2/3 flex flex-col bg-zinc-950/40">

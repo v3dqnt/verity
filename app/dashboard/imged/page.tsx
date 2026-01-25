@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect, useRef, memo } from 'react';
 import Link from 'next/link';
+import Script from 'next/script';
 import { ArrowLeft, Sparkles, Image as ImageIcon, Download, Share2, Layers, Loader2, Maximize2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from "next/navigation";
@@ -61,6 +62,35 @@ export default function ImgedPage() {
     setGeneratedVideo(null);
 
     try {
+      // --- NEW: USE PUTER FOR IMAGE (FREE & UNLIMITED) ---
+      if (mode === "image" && (window as any).puter) {
+        console.log("Using Puter.js for Nano Banana Image Synthesis...");
+        try {
+          // Puter returns an HTMLImageElement by default, or we can get base64
+          // However, puter.ai.txt2img returns a promise that resolves to an image element.
+          // We can use response_format: 'base64' if supported or just use the element's src.
+          const result = await (window as any).puter.ai.txt2img(prompt, {
+            model: "gemini-2.5-flash-image-preview",
+            aspect_ratio: aspectRatio,
+            response_format: 'base64' // Trying base64 first
+          });
+
+          // Check if result is a string (base64) or element
+          if (typeof result === 'string') {
+            setGeneratedImage(`data:image/jpeg;base64,${result}`);
+            setLoading(false);
+            return;
+          } else if (result && result.src) {
+            setGeneratedImage(result.src);
+            setLoading(false);
+            return;
+          }
+        } catch (puterErr) {
+          console.error("Puter.js failed, falling back to API:", puterErr);
+        }
+      }
+
+      // --- FALLBACK TO SERVER API (Existing Logic) ---
       const res = await fetch('/api/ai/imged', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -73,7 +103,6 @@ export default function ImgedPage() {
       });
 
       const data = await res.json();
-
       if (data.error) throw new Error(data.error);
 
       if (mode === "video") {
@@ -106,6 +135,7 @@ export default function ImgedPage() {
 
   return (
     <main className="min-h-screen bg-[#020202] text-white p-6 md:p-12 relative overflow-x-hidden font-sans selection:bg-emerald-500 selection:text-black">
+      <Script src="https://js.puter.com/v2/" strategy="afterInteractive" />
       <Stars />
       <div className="max-w-7xl mx-auto relative z-10">
 
