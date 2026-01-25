@@ -453,7 +453,7 @@ export default function OrchestratorPage() {
           <div className="liquid-glass rounded-[2.5rem] p-8 md:p-10 backdrop-blur-md h-full overflow-y-auto max-h-[600px] scrollbar-hide">
             <div className="flex items-center gap-4 mb-10">
               <ScrollText size={16} className="text-emerald-500" />
-              <span className="text-[10px] font-mono text-emerald-500 uppercase tracking-[0.4em]">Orchestrated Script</span>
+              <span className="text-[10px] font-mono text-emerald-500 uppercase tracking-[0.4em]">Produced Script</span>
             </div>
             <div className="space-y-8">
               {(data?.script || []).map((step: any, idx: number) => (
@@ -507,7 +507,7 @@ export default function OrchestratorPage() {
         <div className="max-w-[1400px] w-full z-10">
           <header className="mb-12">
             <h1 className="text-7xl md:text-8xl font-black italic uppercase tracking-tighter mb-12 leading-[0.85]">
-              Omni <span className="text-emerald-500">/</span><br />Orchestrator
+              Content <span className="text-emerald-500">/</span><br />Producer
             </h1>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-12 relative z-50">

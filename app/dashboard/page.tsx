@@ -134,7 +134,7 @@ export default function Dashboard() {
           </header>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-[300px]">
-            {/* OMNI ORCHESTRATOR */}
+            {/* CONTENT PRODUCER */}
             <Link
               href="/dashboard/orchestrator"
               onClick={(e) => navigateWithFade(e, "/dashboard/orchestrator")}
@@ -155,8 +155,8 @@ export default function Dashboard() {
                     <Cpu size={28} />
                   </div>
                   <div>
-                    <h3 className="text-3xl font-black italic uppercase text-white tracking-tighter transition-transform group-hover:translate-x-1 duration-300">Omni Orchestrator</h3>
-                    <p className="text-zinc-400 text-base mt-2 font-medium italic">Unified campaign engine. Sync visual DNA and copy strategy.</p>
+                    <h3 className="text-3xl font-black italic uppercase text-white tracking-tighter transition-transform group-hover:translate-x-1 duration-300">Content Producer</h3>
+                    <p className="text-zinc-400 text-base mt-2 font-medium italic">Unified content engine. Sync visual DNA and copy strategy.</p>
                   </div>
                 </div>
               </motion.div>
@@ -246,33 +246,25 @@ export default function Dashboard() {
               </motion.div>
             </Link>
 
-            {/* IMGED GENERATOR */}
-            <Link
-              href="/dashboard/imged"
-              onClick={(e) => navigateWithFade(e, "/dashboard/imged")}
-              className="block group relative rounded-[2.5rem]"
-            >
-              <motion.div
-                whileHover={{ y: -5, scale: 1.02 }}
-                transition={{ duration: 0.4, ease: "easeOut" }}
-                className="h-full w-full liquid-glass p-8 rounded-[2.5rem] flex flex-col justify-between overflow-hidden relative shadow-2xl
-                   hover:shadow-[0_8px_32px_0_rgba(236,72,153,0.3),inset_0_1px_0_rgba(255,255,255,0.3)]"
-              >
-                {/* Inner Glow */}
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(236,72,153,0.15),transparent_60%)] opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+            {/* AD ENGINE (DISABLED) */}
+            <div className="block group relative rounded-[2.5rem] cursor-not-allowed opacity-50">
+              <div className="h-full w-full liquid-glass p-8 rounded-[2.5rem] flex flex-col justify-between overflow-hidden relative shadow-2xl grayscale transition-all">
                 <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
 
                 <div className="relative z-10 flex flex-col justify-between h-full">
-                  <div className="w-12 h-12 bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-400 group-hover:bg-pink-500 group-hover:text-black group-hover:scale-110 transition-all duration-500 shadow-inner border border-white/5">
-                    <Camera size={24} />
+                  <div className="flex justify-between items-start">
+                    <div className="w-12 h-12 bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-600 shadow-inner border border-white/5">
+                      <Camera size={24} />
+                    </div>
+                    <span className="text-[8px] font-mono font-black uppercase tracking-[0.3em] bg-red-500/10 text-red-500 px-3 py-1 rounded-full border border-red-500/20">Offline</span>
                   </div>
                   <div>
-                    <h3 className="text-2xl font-black italic uppercase text-white tracking-tighter transition-transform group-hover:translate-x-1">AD<span className="text-pink-500"> </span>ENGINE</h3>
-                    <p className="text-zinc-400 text-sm mt-2 font-medium italic">Generative visual synthesis engine.</p>
+                    <h3 className="text-2xl font-black italic uppercase text-zinc-500 tracking-tighter">AD ENGINE</h3>
+                    <p className="text-zinc-600 text-sm mt-2 font-medium italic">Generative visual synthesis engine (In Development).</p>
                   </div>
                 </div>
-              </motion.div>
-            </Link>
+              </div>
+            </div>
 
           </div>
         </div>

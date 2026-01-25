@@ -154,7 +154,7 @@ ${scriptType === 'Content' ? 'Focus on surprising insights and repeatable mindse
     const selectedStrategy = mode === 'improvement' ? strategyPrompts.Improvement : (strategyPrompts[scriptType] || strategyPrompts.Content);
 
     const systemPrompt = `
-You are the Omni Orchestrator AI, powered by GPT-5.
+You are the Content Producer AI, powered by GPT-5.
 
 ${mode === 'improvement' ? '[MODE: SCRIPT IMPROVEMENT]' : brandBlock}
 
