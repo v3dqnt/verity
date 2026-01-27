@@ -54,15 +54,27 @@ export default function SignalRadar() {
   const [brands, setBrands] = useState<any[]>([]);
   const [selectedBrandId, setSelectedBrandId] = useState<string>('');
   const [showBrandSelector, setShowBrandSelector] = useState(false);
+  const [session, setSession] = useState<any>(null);
 
   // --- UPDATED AUTH & VAULT SYNC ---
 
-  const loadVault = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const loadVault = useCallback(async (currentSession: any) => {
+    if (!currentSession) return;
 
     try {
-      const res = await fetch(`/api/ai/trends?userId=${session.user.id}`);
+      const res = await fetch(`/api/ai/trends?userId=${currentSession.user.id}`);
       if (!res.ok) return;
 
       const data = await res.json();
@@ -75,25 +87,24 @@ export default function SignalRadar() {
     }
   }, []);
 
-  const loadBrands = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+  const loadBrands = useCallback(async (currentSession: any) => {
+    if (!currentSession) return;
     const { data, error } = await supabase
       .from('briefs')
       .select('*')
-      .eq('user_id', session.user.id);
+      .eq('user_id', currentSession.user.id);
     if (!error) setBrands(data || []);
   }, []);
 
   useEffect(() => {
-    loadVault();
-    loadBrands();
-  }, [loadVault, loadBrands]);
+    if (session) {
+      loadVault(session);
+      loadBrands(session);
+    }
+  }, [session, loadVault, loadBrands]);
 
   const toggleSave = async (e: React.MouseEvent, trend: any) => {
     e.stopPropagation();
-    const { data: { session } } = await supabase.auth.getSession();
-
     if (!session) {
       alert("Please log in to save trends.");
       return;
@@ -133,10 +144,9 @@ export default function SignalRadar() {
   };
 
   const fetchSignals = useCallback(async (searchTerm = '', reset = false) => {
-    if (loading) return; // Prevent multiple requests
+    if (loading) return;
     setLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
       const userId = session?.user?.id || '';
 
       const query = searchTerm.trim() || "latest global tech and cultural breakthroughs";
@@ -314,7 +324,7 @@ Please create a script that follows this exact format and structure, optimized f
                 <div className="flex items-center gap-3 bg-zinc-900 border border-white/10 px-8 py-3 rounded-full shadow-2xl">
                   <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                   <p className="text-[10px] font-bold font-mono uppercase tracking-[0.3em] text-zinc-300">
-                    Note: Comprehensive signal analysis takes approx. 10 minutes to synchronize results
+                    Note: High-speed signal analysis is active. Results sync in real-time.
                   </p>
                 </div>
               </div>
@@ -514,8 +524,8 @@ Please create a script that follows this exact format and structure, optimized f
                 <Loader2 className="text-emerald-500 animate-spin relative" size={48} />
               </div>
               <div className="flex flex-col items-center gap-3">
-                <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-[0.6em] animate-pulse">Synchronizing Deep Content Intelligence...</p>
-                <p className="text-[8px] font-mono text-zinc-600 uppercase tracking-[0.4em]">Estimated processing time: 10 minutes</p>
+                <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-[0.6em] animate-pulse">Synchronizing Live Intelligence...</p>
+                <p className="text-[8px] font-mono text-zinc-600 uppercase tracking-[0.4em]">Optimizing trend velocity for your brand...</p>
               </div>
             </div>
           )}
