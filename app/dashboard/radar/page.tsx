@@ -310,6 +310,14 @@ Please create a script that follows this exact format and structure, optimized f
                 </button>
               </div>
 
+              <div className="mt-8 flex justify-center">
+                <div className="flex items-center gap-3 bg-zinc-900 border border-white/10 px-8 py-3 rounded-full shadow-2xl">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <p className="text-[10px] font-bold font-mono uppercase tracking-[0.3em] text-zinc-300">
+                    Note: Comprehensive signal analysis takes approx. 10 minutes to synchronize results
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </header>
@@ -505,7 +513,10 @@ Please create a script that follows this exact format and structure, optimized f
                 <div className="absolute inset-0 blur-2xl bg-emerald-500/40 animate-pulse rounded-full" />
                 <Loader2 className="text-emerald-500 animate-spin relative" size={48} />
               </div>
-              <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-[0.6em] animate-pulse">Synchronizing Deep Content Intelligence...</p>
+              <div className="flex flex-col items-center gap-3">
+                <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-[0.6em] animate-pulse">Synchronizing Deep Content Intelligence...</p>
+                <p className="text-[8px] font-mono text-zinc-600 uppercase tracking-[0.4em]">Estimated processing time: 10 minutes</p>
+              </div>
             </div>
           )}
         </div>

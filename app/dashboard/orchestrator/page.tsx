@@ -647,6 +647,21 @@ export default function OrchestratorPage() {
                   {mode === 'improvement' ? 'Optimize Script' : (isHeroMode ? 'Deploy Multi-Strategy' : 'Deploy Strategy')}
                 </button>
               </div>
+
+              {isHeroMode && !loading && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-6 flex justify-center"
+                >
+                  <div className="flex items-center gap-3 bg-emerald-500/10 px-8 py-3 rounded-full border border-emerald-500/30 shadow-[0_0_30px_rgba(16,185,129,0.1)]">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <p className="text-[11px] font-bold font-mono uppercase tracking-[0.3em] text-emerald-400">
+                      Hero Mode Active / Multi-Platform Strategy Loop
+                    </p>
+                  </div>
+                </motion.div>
+              )}
             </div>
           </header>
 
@@ -675,7 +690,14 @@ export default function OrchestratorPage() {
           {loading && (
             <div className="mt-20 flex flex-col items-center gap-4">
               <RefreshCw className="animate-spin text-emerald-500" size={40} />
-              <span className="text-[10px] font-mono text-emerald-500 uppercase tracking-[0.6em] animate-pulse">Orchestrating...</span>
+              <div className="flex flex-col items-center gap-2">
+                <span className="text-[12px] font-bold font-mono text-emerald-500 uppercase tracking-[0.5em] animate-pulse">Orchestrating...</span>
+                {isHeroMode && (
+                  <p className="text-[9px] font-bold font-mono text-zinc-400 uppercase tracking-[0.3em] bg-white/5 px-6 py-2 rounded-full border border-white/10 mt-2">
+                    Generating scripts one by one... Please hold.
+                  </p>
+                )}
+              </div>
             </div>
           )}
         </div>
