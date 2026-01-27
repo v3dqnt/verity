@@ -60,12 +60,18 @@ export async function GET(req: Request) {
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
     const openai = new OpenAI({ apiKey: openaiKey });
 
-    // Fetch Brand Context
-    let brandContext: Record<string, unknown> | null = null;
-    if (brandId && brandId !== 'null' && brandId !== 'undefined') {
-      const { data } = await supabaseAdmin.from('briefs').select('*').eq('id', brandId).maybeSingle();
-      brandContext = data as Record<string, unknown> | null;
-    }
+    // Parallelize Data Fetching
+    const [brandContextRes, vaultItemsRes] = await Promise.all([
+      (brandId && brandId !== 'null' && brandId !== 'undefined')
+        ? supabaseAdmin.from('briefs').select('*').eq('id', brandId).maybeSingle()
+        : Promise.resolve({ data: null }),
+      (userId && userId !== 'undefined' && userId !== 'null')
+        ? supabaseAdmin.from('signal_vault').select('topic').eq('user_id', userId)
+        : Promise.resolve({ data: [] })
+    ]);
+
+    const brandContext = brandContextRes.data as Record<string, unknown> | null;
+    const savedTopics = new Set((vaultItemsRes.data as { topic: string }[] | null)?.map(v => v.topic) || []);
 
     // Load user's saved vault if no search is active
     if (!intent && !brandId && userId && userId !== 'undefined' && userId !== 'null') {
@@ -76,12 +82,6 @@ export async function GET(req: Request) {
         .order('created_at', { ascending: false });
       if (error) throw error;
       return NextResponse.json({ data: data || [] });
-    }
-
-    let savedTopics = new Set<string>();
-    if (userId && userId !== 'undefined' && userId !== 'null') {
-      const { data: vaultItems } = await supabaseAdmin.from('signal_vault').select('topic').eq('user_id', userId);
-      savedTopics = new Set((vaultItems as { topic: string }[] | null)?.map(v => v.topic) || []);
     }
 
     const industry = brandContext?.industry ? String(brandContext.industry) : (intent || "general");
@@ -140,11 +140,10 @@ export async function GET(req: Request) {
 DATE: ${today}
 
 ROLE:
-You are a platform-native trend analyst for Instagram Reels and YouTube Shorts.
+You are a platform-native trend analyst for Instagram Reels and YouTube Shorts. Your task is to find high-velocity trends and validate them for the specific brand context.
 
 RESEARCH MANDATE:
-Before selecting any trends, you must mentally simulate searching these exact queries:
-
+Before selecting any trends, mentally simulate searching these exact queries:
 ${allQueries.map(q => `- ${q}`).join("\n")}
 
 You are ONLY allowed to select trends that would realistically appear from these searches.
@@ -152,7 +151,7 @@ You are ONLY allowed to select trends that would realistically appear from these
 GOAL:
 Return exactly 3 REAL trends that:
 1) Are already visible on Instagram or YouTube.
-2) Match the brand voice.
+2) Match the brand voice perfectly (Avoid corporate-cringe or off-brand suggestions).
 3) Directly advance the user's goal: "${intent || "global impact"}".
 
 BRAND CONTEXT:
@@ -161,10 +160,11 @@ ${brandPromptPart}
 USER INTENT:
 "${intent || "global impact"}"
 
+${signalContext}
+
 REALISM RULES:
 - Only select trends currently circulating on Instagram Reels or YouTube Shorts.
-- Do NOT invent trends that do not exist on these platforms.
-- Each trend must reflect a format creators are actively repeating.
+- Do NOT invent trends. Each must reflect a format creators are actively repeating.
 - Format explanations must describe how creators actually shoot and structure the video.
 - No corporate tone. No marketing jargon.
 - If a trend feels awkward for this brand, reject it.
@@ -182,8 +182,7 @@ Community → challenges, POVs
 FORMAT TRANSLATION REQUIREMENTS:
 For each trend:
 - Rename it in creator-native language.
-- Describe exactly how creators structure the video.
-- Include hook style, pacing, framing, and beat flow.
+- Describe exactly how creators structure the video (hook style, pacing, framing, beat flow).
 - Explain why this format is spreading now.
 
 EVIDENCE REQUIREMENTS:
@@ -194,7 +193,7 @@ EVIDENCE REQUIREMENTS:
 OUTPUT CONTRACT:
 Return ONLY valid JSON:
 {
-  "thinking": "...",
+  "thinking": "Your deep strategic thought process and editorial rationale for selecting these 3 specific trends for this brand.",
   "trends": [
     {
       "name": "...",
@@ -212,13 +211,10 @@ Return ONLY valid JSON:
     }
   ]
 }
-
-NO MARKDOWN. NO EXTRA TEXT.
 `;
 
-    console.log(`Executing OpenAI GPT-5 with Web Search for: ${industry}...`);
+    console.log(`Executing OpenAI GPT-5 Research for: ${industry}...`);
 
-    // --- ATTEMPT 1: OpenAI GPT-5 Research ---
     const researchResponse = await openai.responses.create({
       model: "gpt-5",
       tools: [{ type: "web_search" }],
@@ -272,19 +268,45 @@ NO MARKDOWN. NO EXTRA TEXT.
       console.warn("Validator Pass Failed (using raw research):", valErr);
     }
 
-    const posts = (parsedData.trends || []).map((item: any, idx: number) => ({
-      id: `trend-${idx}-${Date.now()}`,
-      name: item.name,
-      status: item.status,
-      score: item.score,
-      desc: item.desc,
-      category: item.platform,
-      link: `https://www.google.com/search?q=${encodeURIComponent(item.name)}`,
-      isSaved: savedTopics.has(item.name),
-      ugc_strategy: item.ugc_strategy,
-      source_evidence: item.source_evidence,
-      example_urls: item.example_urls,
-      source_links: item.source_links
+    // --- STEP 3: URL VALIDATION PASS ---
+    const validateUrl = async (url: string) => {
+      if (!url || url.includes("example.com") || url.includes("PLACEHOLDER")) return null;
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 3000);
+        const res = await fetch(url, {
+          method: 'HEAD',
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' },
+          signal: controller.signal
+        });
+        clearTimeout(timeout);
+        return res.ok ? url : null;
+      } catch {
+        return null;
+      }
+    };
+
+    console.log("Validating signal URLs...");
+    const posts = await Promise.all((parsedData.trends || []).map(async (item: any, idx: number) => {
+      const [validExamples, validSources] = await Promise.all([
+        Promise.all((item.example_urls || []).map(validateUrl)),
+        Promise.all((item.source_links || []).map(validateUrl))
+      ]);
+
+      return {
+        id: `trend-${idx}-${Date.now()}`,
+        name: item.name,
+        status: item.status,
+        score: item.score,
+        desc: item.desc,
+        category: item.platform,
+        link: `https://www.google.com/search?q=${encodeURIComponent(item.name)}`,
+        isSaved: savedTopics.has(item.name),
+        ugc_strategy: item.ugc_strategy,
+        source_evidence: item.source_evidence,
+        example_urls: validExamples.filter(Boolean),
+        source_links: validSources.filter(Boolean)
+      };
     }));
 
     return NextResponse.json({
