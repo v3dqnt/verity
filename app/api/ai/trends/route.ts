@@ -89,19 +89,70 @@ export async function GET(req: Request) {
 
     const brandPromptPart = brandContext ? `
       BRAND IDENTITY DEEP DIVE:
+      - Overview Summary: ${brandContext.brand_summary || 'N/A'}
       - Company Name: ${brandContext.company_name || 'N/A'}
-      - Industry Segment: ${brandContext.industry || 'N/A'}
-      - Brand Tone & Voice: ${brandContext.tone_voice || 'N/A'}
-      - Target Audience: ${brandContext.target_audience || 'N/A'}
-      - Target Age Groups: ${JSON.stringify(brandContext.target_age_groups || [])}
-      - Mission Brief: ${brandContext.mission_brief || 'N/A'}
-      - Visual Aesthetic: ${brandContext.visual_aesthetic || 'N/A'}
       - Entity Type: ${brandContext.entity_type || 'brand'}
-      - Competitors: ${JSON.stringify(brandContext.competitors || [])}
-      - Social Links: ${JSON.stringify(brandContext.social_links || {})}
-      - Content Samples (reference URLs): ${JSON.stringify(brandContext.content_samples || [])}
-      - Product Analysis: ${JSON.stringify(brandContext.product_analysis || [])}
-    ` : `No specific brand context provided. Use general high-velocity internet signals.`;
+      - Industry Segment: ${brandContext.industry || 'N/A'}
+      - Tagline: ${brandContext.tagline || 'N/A'}
+      - Mission Brief: ${brandContext.mission_brief || 'N/A'}
+      - Vision: ${brandContext.vision || 'N/A'}
+      - Strategy Label: ${brandContext.title || 'N/A'}
+
+      MARKET POSITIONING:
+      - Archetype: ${brandContext.archetype || 'N/A'}
+      - Personality Traits: ${JSON.stringify(brandContext.personality || [])}
+      - Values: ${JSON.stringify(brandContext.values || [])}
+      - Positioning Statement: ${brandContext.positioning || 'N/A'}
+      - Competitors/Inspirations: ${JSON.stringify(brandContext.competitors || [])}
+
+      AUDIENCE:
+      - Target Age Groups: ${JSON.stringify(brandContext.target_age_groups || [])}
+      - Target Audience (General): ${brandContext.target_audience || 'N/A'}
+
+      BRAND VOICE & TONE:
+      - Primary Tone: ${brandContext.tone_voice || 'N/A'}
+      - Extra Tone Instructions: ${brandContext.tone_extra_instructions || 'N/A'}
+      - Voice Traits: ${JSON.stringify(brandContext.voice_traits || [])}
+      - Do Say: ${JSON.stringify(brandContext.do_say || [])}
+      - Don't Say: ${JSON.stringify(brandContext.dont_say || [])}
+      - Humor Style: ${brandContext.humor_style || 'N/A'}
+      - Slang Level: ${brandContext.slang_level || 3}/5
+      - Emoji Usage: ${brandContext.emoji_usage || 2}/5
+
+      VISUAL IDENTITY:
+      - Visual Aesthetic: ${brandContext.visual_aesthetic || 'N/A'}
+      - Logo URL: ${brandContext.logo_url || 'N/A'}
+      - Product Analysis/DNA: ${JSON.stringify(brandContext.product_analysis || [])}
+      - Reference Content Samples: ${JSON.stringify(brandContext.content_samples || [])}
+
+      GUARDRAILS:
+      - Legal Constraints: ${JSON.stringify(brandContext.legal_constraints || [])}
+      - Sensitive Topics: ${JSON.stringify(brandContext.sensitive_topics || [])}
+      - Banned Topics: ${JSON.stringify(brandContext.banned_topics || [])}
+
+      ${brandContext.entity_type === 'creator' ? `
+      CREATOR-SPECIFIC INTEL:
+      - Creator Stage: ${brandContext.creator_stage || 'N/A'}
+      - Persona Name: ${brandContext.persona_name || 'N/A'}
+      - Goals: ${JSON.stringify(brandContext.goals || [])}
+      - Content Pillars: ${JSON.stringify(brandContext.content_pillars || [])}
+      - Catchphrases: ${JSON.stringify(brandContext.catchphrases || [])}
+      - On-Screen Presence: ${brandContext.on_screen_presence || 'N/A'}
+      - Awareness Level: ${brandContext.awareness_level || 'N/A'}
+      - Language Style: ${brandContext.language_style || 'N/A'}
+      - Pain Points: ${JSON.stringify(brandContext.pain_points || [])}
+      - Objections: ${JSON.stringify(brandContext.objections || [])}
+      - Content they skip: ${JSON.stringify(brandContext.content_they_skip || [])}
+      - Offers/Monetization: ${JSON.stringify(brandContext.offers || [])}
+      - Visual References: ${JSON.stringify(brandContext.visual_refs || [])}
+      - No-Go Visuals: ${JSON.stringify(brandContext.no_go_visuals || [])}
+      - Preferred Brand Partnerships: ${JSON.stringify(brandContext.preferred_brand_types || [])}
+      - Personal Boundaries: ${JSON.stringify(brandContext.personal_boundaries || [])}
+      ` : ''}
+
+      SOCIAL PRESENCE LINKS:
+      ${JSON.stringify(brandContext.social_links || {})}
+    ` : `No specific brand context provided. Use general high-velocity internet signals. (Primary focus: ${industry || 'global impact'})`;
 
     const signalContext = savedTopics.size > 0
       ? `EXCLUSION LIST (Do not suggest these): ${Array.from(savedTopics).join(", ")}`
@@ -236,7 +287,7 @@ Return ONLY valid JSON:
 
     // --- STEP 2: GPT-5 VALIDATOR PASS ---
     try {
-      console.log("Starting GPT-5 Validator Pass...");
+      console.log("Starting GPT-5 Mini Validator Pass...");
       const validatorPrompt = `
         You are a ruthless brand + culture editor. Review these trends for the brand context provided.
 
@@ -257,7 +308,7 @@ Return ONLY valid JSON:
       `;
 
       const validationResponse = await openai.responses.create({
-        model: "gpt-5",
+        model: "gpt-5-mini",
         input: validatorPrompt,
       });
 

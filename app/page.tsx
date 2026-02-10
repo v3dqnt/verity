@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, Lock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase'; 
+import { supabase } from '@/lib/supabase';
 
 // --- BACKGROUND COMPONENTS ---
 
@@ -17,12 +17,12 @@ const ShootingStars = () => {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      const newStar = { 
-        id: Date.now(), 
-        x: Math.random() * 100, 
-        y: Math.random() * 40 
+      const newStar = {
+        id: Date.now(),
+        x: Math.random() * 100,
+        y: Math.random() * 40
       };
-      setStars((prev) => [...prev, newStar].slice(-3)); 
+      setStars((prev) => [...prev, newStar].slice(-3));
     }, 4000);
     return () => clearInterval(interval);
   }, []);
@@ -33,11 +33,11 @@ const ShootingStars = () => {
         <motion.div
           key={star.id}
           className="absolute h-px bg-linear-to-r from-transparent via-emerald-500 to-transparent"
-          style={{ 
-            left: `${star.x}%`, 
-            top: `${star.y}%`, 
-            width: '150px', 
-            transform: 'rotate(35deg)' 
+          style={{
+            left: `${star.x}%`,
+            top: `${star.y}%`,
+            width: '150px',
+            transform: 'rotate(35deg)'
           }}
           initial={{ opacity: 0, x: -100, y: -100 }}
           animate={{ opacity: [0, 1, 0], x: 400, y: 400 }}
@@ -82,7 +82,7 @@ const StarsBackground = () => {
         // Shimmer logic: Pulse opacity
         s.opacity += s.speed;
         if (s.opacity > 1 || s.opacity < 0) s.speed = -s.speed;
-        
+
         ctx.beginPath();
         ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(255, 255, 255, ${Math.abs(s.opacity)})`;
@@ -104,6 +104,26 @@ const StarsBackground = () => {
   }, []);
 
   return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none z-0" />;
+};
+
+const BlindsTransition = ({ isActive }: { isActive: boolean }) => {
+  return (
+    <div className="fixed inset-0 z-[100] pointer-events-none flex">
+      {Array.from({ length: 12 }).map((_, i) => (
+        <motion.div
+          key={i}
+          initial={{ scaleY: 0 }}
+          animate={{ scaleY: isActive ? 1 : 0 }}
+          transition={{
+            duration: 0.7,
+            delay: i * 0.04,
+            ease: [0.4, 0, 0.2, 1]
+          }}
+          className="flex-1 bg-emerald-500 origin-top border-r border-emerald-400/10 last:border-r-0"
+        />
+      ))}
+    </div>
+  );
 };
 
 export default function LandingPage() {
@@ -139,21 +159,21 @@ export default function LandingPage() {
       if (session) {
         router.push('/dashboard');
       } else {
-        router.push('/auth'); 
+        router.push('/auth');
       }
-    }, 500); 
+    }, 1100);
   };
 
   return (
     <main className="h-screen bg-black text-white flex flex-col font-sans selection:bg-emerald-500 selection:text-black overflow-hidden relative">
-      
+
       {/* BACKGROUND LAYERS */}
       <StarsBackground />
       <ShootingStars />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.04)_0%,transparent_70%)] pointer-events-none" />
 
       {/* FADE CONTENT WRAPPER */}
-      <motion.div 
+      <motion.div
         animate={{ opacity: isExiting ? 0 : 1 }}
         transition={{ duration: 0.5 }}
         className="flex-1 flex flex-col relative z-10"
@@ -191,8 +211,8 @@ export default function LandingPage() {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
           >
-            <button 
-              onClick={handleEntry} 
+            <button
+              onClick={handleEntry}
               disabled={isLoading}
               className="group relative block outline-none border-none bg-transparent cursor-pointer disabled:opacity-50"
             >
@@ -210,7 +230,7 @@ export default function LandingPage() {
                   <Lock size={20} className="text-black group-hover:scale-110 transition-transform" />
                 )}
               </motion.div>
-              
+
               {/* Outline Offset Effect */}
               <div className="absolute inset-0 border border-white translate-x-2 translate-y-2 -z-10 group-hover:border-emerald-500 transition-colors" />
             </button>
@@ -224,6 +244,8 @@ export default function LandingPage() {
           </p>
         </div>
       </motion.div>
+
+      <BlindsTransition isActive={isExiting} />
 
       {/* NOISE OVERLAY */}
       <div className="pointer-events-none absolute inset-0 opacity-[0.03] bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
