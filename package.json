@@ -23,6 +23,7 @@
     "@supabase/auth-helpers-nextjs": "^0.15.0",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.90.1",
+    "@tavily/core": "^0.7.1",
     "@types/xml2js": "^0.4.14",
     "ai": "^6.0.3",
     "class-variance-authority": "^0.7.1",

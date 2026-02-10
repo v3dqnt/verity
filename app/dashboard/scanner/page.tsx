@@ -2,10 +2,10 @@
 import React, { useState, useEffect, useRef, memo } from 'react';
 import { VibeScanner } from '@/components/VibeScanner';
 import Link from 'next/link';
-import { ArrowLeft, LogOut } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import FloatingNav from '@/components/FloatingNav';
 
 // --- BACKGROUND COMPONENT (From Radar) ---
 const Stars = memo(() => {
@@ -51,17 +51,8 @@ export default function ScannerPage() {
       <Stars />
       <div className="max-w-7xl mx-auto relative z-10">
 
-        {/* NAVIGATION (From Radar) */}
-        <nav className="flex justify-between items-center mb-16 border-b border-white/5 pb-8">
-          <Link
-            href="/dashboard"
-            onClick={(e) => navigateWithFade(e, "/dashboard")}
-            className="flex items-center gap-3 text-zinc-500 hover:text-emerald-500 transition-all group"
-          >
-            <ArrowLeft size={18} />
-            <span className="text-[10px] font-mono uppercase tracking-[0.4em]">Back To Hub</span>
-          </Link>
-        </nav>
+        {/* NAVIGATION */}
+        <FloatingNav activePage="scanner" />
 
         {/* HEADER */}
         <header className="mb-16">

@@ -5,67 +5,82 @@ const openaiKey = process.env.OPENAI_API_KEY || '';
 
 export async function POST(req: Request) {
     try {
-        const { url } = await req.json();
-        if (!url) return NextResponse.json({ error: "URL is required" }, { status: 400 });
+        const { url, social_links, entity_type } = await req.json();
+
+        if (!url && (!social_links?.instagram && !social_links?.tiktok && !social_links?.twitter)) {
+            return NextResponse.json({ error: "At least one digital link is required" }, { status: 400 });
+        }
         if (!openaiKey) return NextResponse.json({ error: "OpenAI API Key missing" }, { status: 500 });
 
         const openai = new OpenAI({ apiKey: openaiKey });
 
+        const formatHandle = (value?: string) => {
+            if (!value) return 'Not provided';
+            return value.startsWith('@') ? value : `@${value}`;
+        };
+
+        const presenceContext = `
+            Target Context:
+            - Entity Type: ${entity_type || 'brand'}
+            - Primary Website: ${url || 'Not provided'}
+            - Instagram: ${formatHandle(social_links?.instagram)}
+            - TikTok: ${formatHandle(social_links?.tiktok)}
+            - Twitter/X: ${formatHandle(social_links?.twitter)}
+        `;
+
         const instructions = `
-      Analyze the brand or creator at this URL: ${url}
-      
-      Task: Extract a comprehensive Brand DNA profile.
-      
-      Required Fields:
-      1. company_name: Official name.
-      2. industry: Specific niche.
-      3. target_audience: Granular Gen Z demographic (e.g., "Streetwear enthusiasts in London, 18-24").
-      4. tone_voice: Archetype (e.g., "Chaotic & Self-Aware", "Minimalist & High-Status").
-      5. mission_brief: A deep dive into their vibe, what they stand for, and their internet personality.
-      6. visual_aesthetic: Describe colors, fonts, and "core" (e.g., "Y2K Cyberpunk", "Clean Girl").
-      7. hooks_sample: 3 viral-style hooks they have used or would use.
-      8. competitors: Identify 3-5 key competitors in their space.
+Research Task: Execute a multi-stage "Deep Discovery" protocol to extract precise ${entity_type === 'creator' ? 'Creator' : 'Brand'} DNA.
 
-      Return ONLY a JSON object:
-      {
-        "company_name": "string",
-        "industry": "string",
-        "target_audience": "string",
-        "tone_voice": "string",
-        "mission_brief": "string",
-        "visual_aesthetic": "string",
-        "hooks_sample": ["string", "string", "string"],
-        "competitors": ["string", "string", "string"]
-      }
-    `;
+Discovery Sources:
+${presenceContext}
 
-        console.log(`Analyzing brand via GPT-5 Research: ${url}...`);
+STRICT DISCOVERY PROTOCOL:
+1. STAGE 1 (${entity_type === 'creator' ? 'Personality Hub' : 'Primary Hub'}): Deep-crawl the website/link-in-bio. Look for 'About', 'Mission', or 'Portfolio'.
+2. STAGE 2 (${entity_type === 'creator' ? 'Content Voice' : 'Social Persona'}): Visit social links. Analyze the last 5-10 posts. Identify recurring content pillars and voice patterns.
+3. STAGE 3 (Market Footprint): Search for mentions, reviews, or interview transcripts. Identify public perception.
+4. STAGE 4 (Synthesis): Create a unified profile. Eliminate citations [e.g., (1)].
 
-        const researchResponse = await (openai as any).responses.create({
+Required Extraction Fields (Return ONLY JSON):
+{
+  "company_name": "Official name or handle",
+  "tagline": "Punchy 1-sentence descriptor",
+  "industry": "Specific niche (e.g., 'Travel AI Tools')",
+  "mission_brief": "Short purpose statement",
+  "visual_aesthetic": "Describe colors/vibe",
+  "tone_voice": "Main vibe (e.g. 'Chaotic & Fast')",
+  "personality": ["adj1", "adj2", "adj3"],
+  ${entity_type === 'creator' ? `
+  "creator_stage": "One of [Beginner, Growth, Established]",
+  "goals": ["Goal 1", "Goal 2"],
+  "humor_style": "Brief descriptor",
+  "on_screen_presence": "Brief descriptor"
+  ` : `
+  "competitors": ["Comp 1", "Comp 2"]
+  `}
+}
+`;
+
+        const response = await (openai as any).responses.create({
             model: "gpt-5",
-            tools: [{ type: "web_search" }],
-            input: [
-                {
-                    role: "system",
-                    content: "Use web_search to ground your brand analysis in current internet presence and cultural data."
-                },
-                {
-                    role: "user",
-                    content: instructions
-                }
+            messages: [
+                { role: "system", content: "You are a Brand DNA Architect. You provide high-fidelity extraction in JSON format." },
+                { role: "user", content: instructions }
             ]
         });
 
-        const rawText = researchResponse.output_text || "{}";
-        const cleanText = rawText.replace(/```json/g, "").replace(/```/g, "").trim();
+        const dataContent = response.output_text || "";
+        const jsonMatch = dataContent.match(/\{[\s\S]*\}/);
 
-        const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) throw new Error("No JSON found in AI response");
+        if (!jsonMatch) {
+            console.error("AI Response failed to provide JSON:", dataContent);
+            throw new Error("Invalid AI Response format");
+        }
 
-        return NextResponse.json(JSON.parse(jsonMatch[0]));
+        const data = JSON.parse(jsonMatch[0]);
+        return NextResponse.json(data);
 
     } catch (error: any) {
-        console.error("BRAND_ANALYZE_ERROR:", error);
+        console.error("AI Analysis Error:", error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }

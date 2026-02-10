@@ -1,9 +1,10 @@
 "use client";
 import { useState, useEffect, useRef, useCallback, memo } from 'react';
-import { Search, Loader2, Home, Send, Sparkles, Database, ExternalLink, BookmarkPlus, CheckCircle, X, Trash2, ArrowBigLeft, ArrowLeft, Globe, Copy, FileText } from 'lucide-react';
+import { Search, Loader2, Send, Sparkles, Database, ExternalLink, BookmarkPlus, CheckCircle, X, Trash2, Globe, Copy, FileText, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { supabase } from "@/lib/supabase";
+import FloatingNav from '@/components/FloatingNav';
 
 // --- BACKGROUND COMPONENT ---
 const Stars = memo(() => {
@@ -43,7 +44,6 @@ export default function SignalRadar() {
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [vaultTrends, setVaultTrends] = useState<any[]>([]);
   const [modelThinking, setModelThinking] = useState<string>('');
-  const [intelligenceData, setIntelligenceData] = useState<any>(null);
 
   const [chatInput, setChatInput] = useState('');
   const [chatHistory, setChatHistory] = useState<{ role: string, content: string }[]>([]);
@@ -158,8 +158,6 @@ export default function SignalRadar() {
         throw new Error(errorData.error || `Server Error ${res.status}`);
       }
       const data = await res.json();
-      console.log("Radar Data:", data);
-
       if (data.thinking) setModelThinking(data.thinking);
 
       if (reset) setTrends(data.posts || []);
@@ -235,18 +233,7 @@ Please create a script that follows this exact format and structure, optimized f
       <Stars />
       <div className="max-w-7xl mx-auto relative z-10">
 
-        <nav className="flex justify-between items-center mb-16 border-b border-white/5 pb-8">
-          <Link href="/dashboard" className="flex items-center gap-3 text-zinc-500 hover:text-emerald-500 transition-all group">
-            <ArrowLeft size={18} />
-            <span className="text-[10px] font-mono uppercase tracking-[0.4em]">Back To Hub</span>
-          </Link>
-          <button
-            onClick={() => setIsVaultOpen(true)}
-            className="flex items-center gap-2 bg-white/5 border border-white/10 px-6 py-2 rounded-full font-mono text-[10px] uppercase tracking-widest hover:bg-emerald-500 hover:text-black transition-all"
-          >
-            <Database size={14} /> Vault ({savedIds.size})
-          </button>
-        </nav>
+        <FloatingNav activePage="radar" />
 
         <header className="mb-20">
           <div className="flex flex-col gap-12">
@@ -255,33 +242,71 @@ Please create a script that follows this exact format and structure, optimized f
                 <h1 className="text-6xl md:text-8xl font-black italic uppercase tracking-tighter leading-none mb-4">
                   Trend <span className="text-emerald-500">/</span> Radar
                 </h1>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-4">
                   <p className="text-zinc-500 font-mono text-[10px] uppercase tracking-[0.4em]">Intent-Based Discovery</p>
+                  <button
+                    onClick={() => setIsVaultOpen(true)}
+                    className="flex items-center gap-2 bg-white/5 border border-white/10 px-5 py-2 rounded-full font-mono text-[10px] uppercase tracking-widest hover:bg-emerald-500 hover:text-black transition-all"
+                  >
+                    <Database size={14} /> Vault ({savedIds.size})
+                  </button>
                 </div>
               </div>
 
-              {/* Brand Context Chips */}
-              <div className="flex flex-col gap-3 w-full lg:w-auto">
-                <label className="text-[10px] font-mono uppercase text-zinc-500 tracking-[0.4em] ml-4 flex items-center gap-2">
-                  <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" /> 01. Brand Context
-                </label>
-                <div className="flex gap-2 p-1.5 liquid-glass rounded-full border border-white/5 overflow-x-auto scrollbar-hide max-w-full lg:max-w-[500px]">
+              {/* Time Estimate Note (Top Right of Row) */}
+              <div className="flex items-center gap-3 bg-white/[0.03] border border-white/10 px-5 py-2.5 rounded-full mb-2">
+                <Clock size={14} className="text-emerald-500" />
+                <p className="text-[9px] font-bold font-mono uppercase tracking-[0.2em] text-zinc-400">
+                  Trend finding can take <span className="text-emerald-500">10-12 mins</span> approximately
+                </p>
+              </div>
+            </div>
+
+            {/* Strategic Row: Search Bar + Selector */}
+            <div className="flex flex-col xl:flex-row items-center gap-4">
+              {/* Left: Search Bar */}
+              <div className="relative flex-1 w-full group/search">
+                <div className="absolute -inset-1 bg-linear-to-r from-emerald-500/20 to-transparent rounded-full blur opacity-25 group-focus-within/search:opacity-100 transition duration-1000" />
+                <div className="relative liquid-glass h-20 p-2.5 rounded-full flex items-center gap-3 w-full shadow-2xl border border-white/10 focus-within:border-emerald-500/40 transition-all backdrop-blur-3xl">
+                  <input
+                    className="flex-1 bg-transparent px-6 h-full outline-none text-lg md:text-xl font-medium italic placeholder:text-zinc-500 text-white min-w-0"
+                    placeholder="What are we building today?"
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') fetchSignals(searchInput, true);
+                    }}
+                  />
+                  <button
+                    onClick={() => fetchSignals(searchInput, true)}
+                    disabled={loading || !searchInput.trim()}
+                    className="bg-emerald-500 text-black h-full aspect-square shrink-0 rounded-full font-black flex items-center justify-center disabled:opacity-20 transition-all hover:scale-[1.05] active:scale-95 shadow-[0_0_20px_rgba(16,185,129,0.3)]"
+                  >
+                    {loading ? <Loader2 className="animate-spin text-black" size={24} /> : <Search size={24} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Right: Separate Brand Selector Area */}
+              <div className="liquid-glass h-20 p-2.5 px-5 rounded-full border border-white/10 bg-black/20 backdrop-blur-3xl overflow-hidden shrink-0 flex items-center">
+                <div className="flex gap-2.5 items-center h-full overflow-x-auto scrollbar-hide max-w-[300px] md:max-w-[600px]">
                   <button
                     onClick={() => setSelectedBrandId('')}
-                    className={`shrink-0 px-6 py-3 rounded-full text-[10px] font-black uppercase transition-all tracking-widest ${!selectedBrandId ? 'bg-white text-black' : 'text-zinc-500 hover:text-white'
-                      }`}
+                    className={`shrink-0 h-full flex items-center gap-3 px-6 rounded-full text-[10px] font-black uppercase transition-all tracking-widest border transition-all ${!selectedBrandId ? 'bg-white text-black border-white' : 'bg-white/5 text-zinc-500 border-white/5 hover:border-white/20 hover:text-white'}`}
                   >
-                    General
+                    <div className="h-6 w-6 rounded-full flex items-center justify-center bg-zinc-800 border border-white/10 shrink-0">
+                      <Globe size={12} className={!selectedBrandId ? 'text-black' : 'text-emerald-500'} />
+                    </div>
+                    <span className="italic tracking-tighter">General</span>
                   </button>
                   {brands.map((brand) => (
                     <button
                       key={brand.id}
                       onClick={() => setSelectedBrandId(brand.id)}
-                      className={`shrink-0 flex items-center gap-3 px-6 py-3 rounded-full border transition-all ${selectedBrandId === brand.id ? 'bg-emerald-500 text-black border-emerald-400' : 'bg-white/5 text-zinc-400 border-white/5 hover:border-white/20 hover:text-white'
-                        }`}
+                      className={`shrink-0 h-full flex items-center gap-3 px-6 rounded-full border transition-all ${selectedBrandId === brand.id ? 'bg-emerald-500 text-black border-emerald-400' : 'bg-white/5 text-zinc-400 border-white/5 hover:border-white/20 hover:text-white'}`}
                     >
                       {brand.logo_url && (
-                        <div className="h-5 w-5 rounded-full overflow-hidden bg-zinc-800 border border-white/10 shrink-0">
+                        <div className="h-6 w-6 rounded-full overflow-hidden bg-zinc-800 border border-white/10 shrink-0">
                           <img src={brand.logo_url} className="w-full h-full object-cover" alt="" />
                         </div>
                       )}
@@ -292,78 +317,9 @@ Please create a script that follows this exact format and structure, optimized f
               </div>
             </div>
 
-            {/* Giant Intent Input */}
-            <div className="relative group">
-              <div className="absolute -inset-1 bg-linear-to-r from-emerald-500/20 to-transparent rounded-[3rem] blur opacity-25 group-focus-within:opacity-100 transition duration-1000" />
-              <div className="relative liquid-glass p-2 rounded-[3rem] flex flex-col md:flex-row gap-2 w-full shadow-2xl border border-white/10 focus-within:border-emerald-500/40 transition-all backdrop-blur-3xl">
-                <div className="flex-1 flex items-center">
-                  <div className="px-8 text-emerald-500 border-r border-white/10 hidden md:block">
-                    <Sparkles size={24} className="animate-pulse" />
-                  </div>
-                  <input
-                    className="flex-1 bg-transparent px-8 py-8 outline-none text-2xl md:text-3xl font-medium italic placeholder:text-zinc-800 text-white min-w-0"
-                    placeholder="Describe what you want to create..."
-                    value={searchInput}
-                    onChange={(e) => setSearchInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') fetchSignals(searchInput, true);
-                    }}
-                  />
-                </div>
-                <button
-                  onClick={() => fetchSignals(searchInput, true)}
-                  disabled={loading || !searchInput.trim()}
-                  className="bg-emerald-500 text-black px-12 py-6 rounded-full font-black uppercase italic flex items-center justify-center gap-3 disabled:opacity-20 transition-all hover:scale-[1.02] active:scale-95 shadow-[0_0_30px_rgba(16,185,129,0.2)]"
-                >
-                  {loading ? <Loader2 className="animate-spin text-black" size={24} /> : <Search size={24} />}
-                  <span className="hidden md:inline">Find Peaking Signals</span>
-                </button>
-              </div>
-
-              <div className="mt-8 flex justify-center">
-                <div className="flex items-center gap-3 bg-zinc-900 border border-white/10 px-8 py-3 rounded-full shadow-2xl">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <p className="text-[10px] font-bold font-mono uppercase tracking-[0.3em] text-zinc-300">
-                    Note: High-speed signal analysis is active. Results sync in real-time.
-                  </p>
-                </div>
-              </div>
-            </div>
           </div>
         </header>
 
-        {intelligenceData && (
-          <motion.section
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-16"
-          >
-            <div className="flex items-center gap-4 mb-8">
-              <div className="h-px flex-1 bg-white/10" />
-              <h2 className="text-[10px] font-mono uppercase tracking-[0.5em] text-emerald-500 whitespace-nowrap">Industry Content Intelligence</h2>
-              <div className="h-px flex-1 bg-white/10" />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-              {[
-                { title: 'Video Formats', data: intelligenceData.videoFormats, icon: '🎬' },
-                { title: 'Peaking Challenges', data: intelligenceData.challenges, icon: '🏆' },
-                { title: 'Viral Hashtags', data: intelligenceData.hashtags, icon: '＃' },
-                { title: 'Trending Sounds', data: intelligenceData.audios, icon: '🎵' }
-              ].map(cat => (
-                <div key={cat.title} className="liquid-glass p-6 rounded-[2rem] border border-white/5 flex flex-col h-full bg-white/[0.02]">
-                  <div className="flex items-center gap-3 mb-6">
-                    <span className="text-xl">{cat.icon}</span>
-                    <h3 className="text-[9px] font-mono uppercase tracking-widest text-zinc-400">{cat.title}</h3>
-                  </div>
-                  <div className="text-[11px] text-zinc-300 leading-relaxed whitespace-pre-wrap font-medium h-[200px] overflow-y-auto custom-scrollbar pr-2">
-                    {cat.data || "Locating real-time signals..."}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </motion.section>
-        )}
 
 
 
@@ -496,19 +452,8 @@ Please create a script that follows this exact format and structure, optimized f
                                 <ExternalLink size={14} className="text-zinc-600 group-hover/link:text-emerald-500" />
                               </a>
                             ))}
-                            <a href={trend.link} target="_blank" rel="noreferrer" className="flex items-center justify-between border border-emerald-500/20 bg-emerald-500/5 p-4 rounded-2xl hover:bg-emerald-500 hover:text-black transition-all group/master">
-                              <span className="text-[9px] font-mono uppercase tracking-widest">Intelligence Audit</span>
-                              <Globe size={14} className="group-hover/master:translate-x-1 transition-transform" />
-                            </a>
                           </div>
                         </div>
-                        <button
-                          onClick={() => { setSelectedTopic(trend); setChatHistory([]); }}
-                          className="mt-auto bg-white/5 p-6 rounded-3xl border border-white/10 hover:border-white/30 text-center group/probe transition-all"
-                        >
-                          <Sparkles className="mx-auto mb-3 text-emerald-500 animate-pulse" size={20} />
-                          <span className="text-[10px] font-black uppercase italic tracking-tighter text-white">Full AI Signal Probe</span>
-                        </button>
                       </div>
                     </div>
                   </motion.div>
@@ -530,7 +475,7 @@ Please create a script that follows this exact format and structure, optimized f
             </div>
           )}
         </div>
-      </div>
+      </div >
 
       <AnimatePresence>
         {isVaultOpen && (
@@ -723,6 +668,6 @@ Please create a script that follows this exact format and structure, optimized f
           </div>
         )}
       </AnimatePresence>
-    </main>
+    </main >
   );
 }

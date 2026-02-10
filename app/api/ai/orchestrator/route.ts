@@ -43,13 +43,34 @@ export async function POST(req: Request) {
 
     // 4. CONSTRUCT SYSTEM PROMPT (HUMAN-LIKE)
     const brandBlock = brandVault ? `
-Brand: ${brandVault.company_name} (${brandVault.entity_type})
-Tone: ${brandVault.tone_voice}
-Visual Aesthetic: ${brandVault.visual_aesthetic}
-Target Audience: ${brandVault.target_audience} (Focus: ${brandVault.target_age_groups?.join(', ')})
-Competitors: ${brandVault.competitors?.join(', ')}
-Mission: ${brandVault.mission_brief}
-Product Visual DNA: ${JSON.stringify(brandVault.product_analysis || [])}
+Brand Identity:
+- Name/Handle: ${brandVault.company_name}
+- Type: ${brandVault.entity_type}
+- Tone: ${brandVault.tone_voice}
+- Visual Aesthetic: ${brandVault.visual_aesthetic}
+- Audience: ${brandVault.target_audience} (${brandVault.target_age_groups?.join(', ')})
+- Mission/Bio: ${brandVault.mission_brief}
+- Product Visual DNA: ${JSON.stringify(brandVault.product_analysis || [])}
+
+${brandVault.entity_type === 'creator' ? `
+[CREATOR SCRIPTING PROTOCOL]
+- Creator Stage: ${brandVault.creator_stage}
+- Primary Goals: ${JSON.stringify(brandVault.goals || [])}
+- Content Pillars: ${JSON.stringify(brandVault.content_pillars || [])}
+- Offers/IP: ${JSON.stringify(brandVault.offers || [])}
+- Humor style: ${brandVault.humor_style}
+- Catchphrases: ${JSON.stringify(brandVault.catchphrases || [])}
+- Personal Boundaries (MUST AVOID): ${JSON.stringify(brandVault.personal_boundaries || [])}
+- On-Screen Presence: ${brandVault.on_screen_presence}
+
+*INSTRUCTION: Use the Humor Style and On-Screen Presence to calibrate the script's energy. Ensure Content Pillars and Goals drive the narrative arc.*
+` : `
+[CORPORATE SCRIPTING PROTOCOL]
+- Competitors: ${brandVault.competitors?.join(', ')}
+- Core Archetype: ${brandVault.archetype}
+- Vision: ${brandVault.vision}
+- Values: ${brandVault.values?.join(', ')}
+`}
 ` : '[NO BRAND DNA PROVIDED]';
 
     // Strategy Definitions

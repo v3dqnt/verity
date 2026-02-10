@@ -11,6 +11,7 @@ import { EditingBox } from '@/components/EditingBox';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
+import FloatingNav from '@/components/FloatingNav';
 
 // PDF Imports
 import { jsPDF } from 'jspdf';
@@ -487,16 +488,7 @@ export default function OrchestratorPage() {
 
   return (
     <main className="min-h-screen bg-[#020202] text-white relative overflow-hidden font-sans">
-      <nav className="w-full sticky top-0 z-50 bg-black/20 backdrop-blur-xl">
-        <div className="max-w-[1400px] mx-auto w-full px-6 md:px-12">
-          <div className="py-10 border-b border-white/10 flex items-center">
-            <Link href="/dashboard" className="group flex items-center gap-3 text-zinc-500 hover:text-emerald-500 transition-all">
-              <ArrowLeft size={18} />
-              <span className="text-[10px] font-mono uppercase tracking-[0.4em]">Return to Hub</span>
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <FloatingNav activePage="deploy" />
 
       <motion.div className="relative min-h-screen w-full flex flex-col items-center p-6 md:p-12">
         <StarsBackground />

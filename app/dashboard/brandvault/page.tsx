@@ -1,11 +1,12 @@
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Plus, Trash2, Edit3, Save, Globe, X, Upload, Loader2, ArrowRight } from 'lucide-react';
+import { Plus, Trash2, Edit3, Save, Globe, X, Upload, Loader2, User } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from "next/navigation";
 import { supabase } from '@/lib/supabase';
 import BrandOnboarding from '@/components/BrandOnboarding';
+import FloatingNav from '@/components/FloatingNav';
 
 // --- BACKGROUND COMPONENTS ---
 
@@ -57,6 +58,7 @@ export default function BrandVault() {
     industry: "",
     target_audience: "",
     tone_voice: "Authentic & Bold",
+    tone_extra_instructions: "",
     mission_brief: "",
     logo_url: "",
     entity_type: 'brand',
@@ -70,7 +72,41 @@ export default function BrandVault() {
     },
     visual_aesthetic: '',
     content_samples: [],
-    product_analysis: []
+    product_analysis: [],
+    // Advanced fields
+    tagline: "",
+    vision: "",
+    values: [],
+    personality: [],
+    archetype: "",
+    positioning: "",
+    voice_traits: [],
+    do_say: [],
+    dont_say: [],
+    humor_style: "",
+    slang_level: 3,
+    emoji_usage: 2,
+    legal_constraints: [],
+    sensitive_topics: [],
+    banned_topics: [],
+    brand_summary: "",
+    // Creator specific
+    creator_stage: "",
+    goals: [],
+    catchphrases: [],
+    persona_name: "",
+    pain_points: [],
+    awareness_level: "",
+    language_style: "",
+    objections: [],
+    content_they_skip: [],
+    content_pillars: [],
+    offers: [],
+    on_screen_presence: "",
+    visual_refs: [],
+    no_go_visuals: [],
+    preferred_brand_types: [],
+    personal_boundaries: []
   });
 
   useEffect(() => {
@@ -116,6 +152,7 @@ export default function BrandVault() {
       industry: brand.industry,
       target_audience: brand.target_audience,
       tone_voice: brand.tone_voice,
+      tone_extra_instructions: brand.tone_extra_instructions || "",
       mission_brief: brand.mission_brief,
       logo_url: brand.logo_url || "",
       entity_type: brand.entity_type || 'brand',
@@ -124,7 +161,41 @@ export default function BrandVault() {
       social_links: brand.social_links || { website: '', instagram: '', tiktok: '', twitter: '' },
       visual_aesthetic: brand.visual_aesthetic || '',
       content_samples: brand.content_samples || [],
-      product_analysis: brand.product_analysis || []
+      product_analysis: brand.product_analysis || [],
+      // Advanced fields
+      tagline: brand.tagline || "",
+      vision: brand.vision || "",
+      values: brand.values || [],
+      personality: brand.personality || [],
+      archetype: brand.archetype || "",
+      positioning: brand.positioning || "",
+      voice_traits: brand.voice_traits || [],
+      do_say: brand.do_say || [],
+      dont_say: brand.dont_say || [],
+      humor_style: brand.humor_style || "",
+      slang_level: brand.slang_level || 3,
+      emoji_usage: brand.emoji_usage || 2,
+      legal_constraints: brand.legal_constraints || [],
+      sensitive_topics: brand.sensitive_topics || [],
+      banned_topics: brand.banned_topics || [],
+      brand_summary: brand.brand_summary || "",
+      // Creator specific
+      creator_stage: brand.creator_stage || "",
+      goals: brand.goals || [],
+      catchphrases: brand.catchphrases || [],
+      persona_name: brand.persona_name || "",
+      pain_points: brand.pain_points || [],
+      awareness_level: brand.awareness_level || "",
+      language_style: brand.language_style || "",
+      objections: brand.objections || [],
+      content_they_skip: brand.content_they_skip || [],
+      content_pillars: brand.content_pillars || [],
+      offers: brand.offers || [],
+      on_screen_presence: brand.on_screen_presence || "",
+      visual_refs: brand.visual_refs || [],
+      no_go_visuals: brand.no_go_visuals || [],
+      preferred_brand_types: brand.preferred_brand_types || [],
+      personal_boundaries: brand.personal_boundaries || []
     });
     setEditingId(brand.id);
     setModalMode('edit');
@@ -134,22 +205,41 @@ export default function BrandVault() {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
-    if (modalMode === 'create') {
-      const { error } = await supabase.from('briefs').insert([{ ...data, user_id: session.user.id }]);
-      if (error) {
-        console.error("Insert Error:", error);
-        alert(`Failed to save: ${error.message}`);
-      } else {
-        closeAndRefresh();
+    try {
+      setLoading(true); // Re-use loading or add specific summarizing state
+
+      // 1. Generate AI Intelligence Summary
+      const summaryRes = await fetch('/api/ai/brand-summarize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ brandData: data })
+      });
+      const summaryData = await summaryRes.json();
+      const finalData = { ...data, brand_summary: summaryData.summary || '' };
+
+      // 2. Save to Supabase
+      if (modalMode === 'create') {
+        const { error } = await supabase.from('briefs').insert([{ ...finalData, user_id: session.user.id }]);
+        if (error) {
+          console.error("Insert Error:", error);
+          alert(`Failed to save: ${error.message}`);
+        } else {
+          closeAndRefresh();
+        }
+      } else if (modalMode === 'edit' && editingId) {
+        const { error } = await supabase.from('briefs').update(finalData).eq('id', editingId);
+        if (error) {
+          console.error("Update Error:", error);
+          alert(`Failed to update: ${error.message}`);
+        } else {
+          closeAndRefresh();
+        }
       }
-    } else if (modalMode === 'edit' && editingId) {
-      const { error } = await supabase.from('briefs').update(data).eq('id', editingId);
-      if (error) {
-        console.error("Update Error:", error);
-        alert(`Failed to update: ${error.message}`);
-      } else {
-        closeAndRefresh();
-      }
+    } catch (err) {
+      console.error("Finalization failed:", err);
+      alert("Failed to finalize brand intelligence.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -162,6 +252,7 @@ export default function BrandVault() {
       industry: "",
       target_audience: "",
       tone_voice: "Authentic & Bold",
+      tone_extra_instructions: "",
       mission_brief: "",
       logo_url: "",
       entity_type: 'brand',
@@ -170,7 +261,41 @@ export default function BrandVault() {
       social_links: { website: '', instagram: '', tiktok: '', twitter: '' },
       visual_aesthetic: '',
       content_samples: [],
-      product_analysis: []
+      product_analysis: [],
+      // Advanced fields
+      tagline: "",
+      vision: "",
+      values: [],
+      personality: [],
+      archetype: "",
+      positioning: "",
+      voice_traits: [],
+      do_say: [],
+      dont_say: [],
+      humor_style: "",
+      slang_level: 3,
+      emoji_usage: 2,
+      legal_constraints: [],
+      sensitive_topics: [],
+      banned_topics: [],
+      brand_summary: "",
+      // Creator specific
+      creator_stage: "",
+      goals: [],
+      catchphrases: [],
+      persona_name: "",
+      pain_points: [],
+      awareness_level: "",
+      language_style: "",
+      objections: [],
+      content_they_skip: [],
+      content_pillars: [],
+      offers: [],
+      on_screen_presence: "",
+      visual_refs: [],
+      no_go_visuals: [],
+      preferred_brand_types: [],
+      personal_boundaries: []
     });
     fetchBrands();
   };
@@ -189,17 +314,9 @@ export default function BrandVault() {
         <ShootingStars />
 
         <div className="max-w-7xl w-full z-10">
-          <nav className="flex justify-between items-center mb-16 border-b border-white/10 pb-8 backdrop-blur-md">
-            <Link href="/dashboard" onClick={(e) => { e.preventDefault(); setIsExiting(true); setTimeout(() => router.push("/dashboard"), 500); }} className="group flex items-center gap-3 text-zinc-500 hover:text-emerald-500 transition-all">
-              <ArrowLeft size={18} />
-              <span className="text-[10px] font-mono uppercase tracking-[0.4em]">Return to Hub</span>
-            </Link>
+          <FloatingNav activePage="vault" />
 
-            <Link href="/dashboard/orchestrator" className="flex items-center gap-3 bg-white/5 border border-white/10 px-5 py-2.5 rounded-full hover:bg-emerald-500 hover:text-black transition-all group">
-              <span className="text-[10px] font-mono uppercase tracking-[0.3em]">Access Orchestrator</span>
-              <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-            </Link>
-          </nav>
+          <div className="pb-6" /> {/* Top spacer */}
 
           <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-8 mb-16">
             <div>
@@ -228,17 +345,17 @@ export default function BrandVault() {
                   shadow-2xl overflow-hidden flex flex-col justify-between"
               >
                 {/* Inner glow layer */}
-                <div className="absolute inset-0 rounded-[3.5rem] bg-[radial-gradient(circle_at_30%_20%,rgba(16,185,129,0.15),transparent_60%)] opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+                <div className={`absolute inset-0 rounded-[3.5rem] bg-[radial-gradient(circle_at_30%_20%,${brand.entity_type === 'brand' ? 'rgba(16,185,129,0.15)' : 'rgba(139,92,246,0.15)'},transparent_60%)] opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none`} />
 
                 <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
 
                 <div className="relative z-10 flex flex-col h-full">
                   <div className="flex justify-between items-start mb-6">
-                    <div className="h-12 w-12 rounded-2xl bg-white/5 backdrop-blur-md flex items-center justify-center border border-white/10 text-emerald-500 overflow-hidden shadow-inner">
+                    <div className={`h-12 w-12 rounded-2xl bg-white/5 backdrop-blur-md flex items-center justify-center border border-white/10 ${brand.entity_type === 'brand' ? 'text-emerald-500' : 'text-violet-400'} overflow-hidden shadow-inner`}>
                       {brand.logo_url ? (
                         <img src={brand.logo_url} alt="Logo" className="w-full h-full object-cover" />
                       ) : (
-                        <Globe size={20} />
+                        brand.entity_type === 'brand' ? <Globe size={20} /> : <User size={20} />
                       )}
                     </div>
                     <div className="flex gap-2">
@@ -253,17 +370,13 @@ export default function BrandVault() {
 
                   <div className="mb-8">
                     <h3 className="text-3xl font-black italic uppercase tracking-tighter mb-2 text-white drop-shadow-lg">{brand.company_name}</h3>
-                    <p className="text-emerald-400 text-[10px] font-mono uppercase tracking-[0.3em]">{brand.industry}</p>
+                    <p className={`${brand.entity_type === 'brand' ? 'text-emerald-400' : 'text-violet-400'} text-[10px] font-mono uppercase tracking-[0.3em]`}>{brand.industry}</p>
                   </div>
 
                   <div className="mt-auto flex flex-col gap-2">
                     <span className="flex items-center justify-between bg-black/40 border border-white/10 backdrop-blur-md text-zinc-100 px-4 py-2 rounded-2xl shadow-sm">
                       <span className="text-[8px] font-mono uppercase tracking-widest text-zinc-500">Tone</span>
                       <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-200">{brand.tone_voice}</span>
-                    </span>
-                    <span className="flex items-center justify-between bg-emerald-500/10 border border-emerald-500/20 backdrop-blur-md text-emerald-100 px-4 py-2 rounded-2xl shadow-sm">
-                      <span className="text-[8px] font-mono uppercase tracking-widest text-emerald-400/90">Profile</span>
-                      <span className="text-[10px] font-mono uppercase tracking-widest text-emerald-50">{brand.title}</span>
                     </span>
                   </div>
                 </div>
