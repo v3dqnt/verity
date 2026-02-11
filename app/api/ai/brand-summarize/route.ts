@@ -104,9 +104,9 @@ export async function POST(req: Request) {
         `;
 
 
-        const response = await (openai as any).responses.create({
-            model: "gpt-5",
-            input: [
+        const response = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [
                 {
                     role: "system",
                     content: "You are the Verity Strategic Architect. Your task is to distill brand DNA into a compressed intelligence summary."
@@ -118,7 +118,7 @@ export async function POST(req: Request) {
             ]
         });
 
-        const summary = response.output_text || "";
+        const summary = response.choices[0].message.content || "";
 
         return NextResponse.json({ summary });
 

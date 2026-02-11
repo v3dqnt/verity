@@ -60,23 +60,24 @@ Required Extraction Fields (Return ONLY JSON):
 }
 `;
 
-        const response = await (openai as any).responses.create({
-            model: "gpt-5",
+        const response = await openai.chat.completions.create({
+            model: "gpt-4o",
             messages: [
                 { role: "system", content: "You are a Brand DNA Architect. You provide high-fidelity extraction in JSON format." },
                 { role: "user", content: instructions }
-            ]
+            ],
+            response_format: { type: "json_object" }
         });
 
-        const dataContent = response.output_text || "";
+        const dataContent = response.choices[0].message.content || "{}";
         const jsonMatch = dataContent.match(/\{[\s\S]*\}/);
 
-        if (!jsonMatch) {
+        if (!jsonMatch && dataContent === "{}") {
             console.error("AI Response failed to provide JSON:", dataContent);
             throw new Error("Invalid AI Response format");
         }
 
-        const data = JSON.parse(jsonMatch[0]);
+        const data = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(dataContent);
         return NextResponse.json(data);
 
     } catch (error: any) {
