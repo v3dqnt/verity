@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from "next/navigation";
 import { supabase } from '@/lib/supabase';
 import BrandOnboarding from '@/components/BrandOnboarding';
-import FloatingNav from '@/components/FloatingNav';
+
 
 // --- BACKGROUND COMPONENTS ---
 
@@ -309,12 +309,12 @@ export default function BrandVault() {
 
   return (
     <main className="min-h-screen bg-[#020202] text-white relative overflow-hidden font-sans">
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: isExiting ? 0 : 1 }} transition={{ duration: 0.5 }} className="relative min-h-screen flex flex-col items-center p-6 md:p-12">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: isExiting ? 0 : 1 }} transition={{ duration: 0.5 }} className="relative min-h-screen flex flex-col items-center pt-32 px-6 md:px-12">
         <StarsBackground />
         <ShootingStars />
 
         <div className="max-w-7xl w-full z-10">
-          <FloatingNav activePage="vault" />
+
 
           <div className="pb-6" /> {/* Top spacer */}
 

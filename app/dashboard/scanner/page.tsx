@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import FloatingNav from '@/components/FloatingNav';
+
 
 // --- BACKGROUND COMPONENT (From Radar) ---
 const Stars = memo(() => {
@@ -47,17 +47,17 @@ export default function ScannerPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#020202] text-white p-6 md:p-12 relative overflow-x-hidden font-sans selection:bg-emerald-500 selection:text-black">
+    <main className="min-h-screen bg-[#020202] text-white pt-40 p-6 md:p-12 relative overflow-x-hidden font-sans selection:bg-emerald-500 selection:text-black">
       <Stars />
       <div className="max-w-7xl mx-auto relative z-10">
 
         {/* NAVIGATION */}
-        <FloatingNav activePage="scanner" />
+
 
         {/* HEADER */}
-        <header className="mb-16">
+        <header className="mt-20 mb-16">
           <h1 className="text-6xl md:text-8xl font-black italic uppercase tracking-tighter leading-none">
-            Vibe <span className="text-emerald-500">/</span> Scanner
+            Auditor
           </h1>
           <p className="text-zinc-500 font-mono text-[10px] uppercase tracking-[0.4em] mt-4">Resonance Audit</p>
         </header>

@@ -4,7 +4,7 @@ import { Search, Loader2, Send, Sparkles, Database, ExternalLink, BookmarkPlus, 
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { supabase } from "@/lib/supabase";
-import FloatingNav from '@/components/FloatingNav';
+
 
 // --- BACKGROUND COMPONENT ---
 const Stars = memo(() => {
@@ -229,18 +229,18 @@ Please create a script that follows this exact format and structure, optimized f
 
 
   return (
-    <main className="min-h-screen bg-[#020202] text-white p-6 md:p-12 relative overflow-x-hidden font-sans selection:bg-emerald-500 selection:text-black">
+    <main className="min-h-screen bg-[#020202] text-white pt-40 p-6 md:p-12 relative overflow-x-hidden font-sans selection:bg-emerald-500 selection:text-black">
       <Stars />
       <div className="max-w-7xl mx-auto relative z-10">
 
-        <FloatingNav activePage="radar" />
 
-        <header className="mb-20">
+
+        <header className="mt-20 mb-20">
           <div className="flex flex-col gap-12">
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-10">
               <div className="space-y-4">
                 <h1 className="text-6xl md:text-8xl font-black italic uppercase tracking-tighter leading-none mb-4">
-                  Trend <span className="text-emerald-500">/</span> Radar
+                  Radar
                 </h1>
                 <div className="flex items-center gap-4">
                   <p className="text-zinc-500 font-mono text-[10px] uppercase tracking-[0.4em]">Intent-Based Discovery</p>

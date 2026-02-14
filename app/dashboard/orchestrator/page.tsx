@@ -11,7 +11,7 @@ import { EditingBox } from '@/components/EditingBox';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
-import FloatingNav from '@/components/FloatingNav';
+
 
 // PDF Imports
 import { jsPDF } from 'jspdf';
@@ -488,9 +488,9 @@ export default function OrchestratorPage() {
 
   return (
     <main className="min-h-screen bg-[#020202] text-white relative overflow-hidden font-sans">
-      <FloatingNav activePage="deploy" />
 
-      <motion.div className="relative min-h-screen w-full flex flex-col items-center p-6 md:p-12">
+
+      <motion.div className="relative min-h-screen w-full flex flex-col items-center pt-32 px-6 md:px-12">
         <StarsBackground />
         <ShootingStars />
         <PlanetHero active={isHeroMode} />
@@ -499,7 +499,7 @@ export default function OrchestratorPage() {
         <div className="max-w-[1400px] w-full z-10">
           <header className="mb-12">
             <h1 className="text-7xl md:text-8xl font-black italic uppercase tracking-tighter mb-12 leading-[0.85]">
-              Content <span className="text-emerald-500">/</span><br />Producer
+              Scribe
             </h1>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-12 relative z-50">

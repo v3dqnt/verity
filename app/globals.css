@@ -1,3 +1,4 @@
+@import url('https://api.fontshare.com/v2/css?f[]=satoshi@900,700,500,301,701,300,501,401,901,400&display=swap');
 @import "tailwindcss";
 
 /* The new v4 way to handle shadcn animations */
@@ -124,6 +125,7 @@
 
   body {
     @apply bg-background text-foreground;
+    font-family: 'Satoshi', sans-serif;
   }
 }
 

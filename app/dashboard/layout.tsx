@@ -1,24 +1,23 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "@/app/globals.css"; // Ensure your global styles are imported
-
-const inter = Inter({ subsets: ["latin"] });
+import FloatingNav from "@/components/FloatingNav"; // Adjusted import path
 
 export const metadata: Metadata = {
-  title: "Verity",
-  description: "AI Ad Generator",
+  title: {
+    template: '%s | Verity',
+    default: 'Verity Dashboard',
+  },
+  description: "AI Ad Generator & Cultural Intelligence",
 };
 
-export default function RootLayout({
+export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} bg-black text-white antialiased`}>
-        {children}
-      </body>
-    </html>
+    <div className="relative min-h-screen bg-[#020202]">
+      <FloatingNav />
+      {children}
+    </div>
   );
 }

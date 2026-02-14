@@ -35,7 +35,7 @@ export default function AuthPage() {
           email,
           password,
           options: {
-            emailRedirectTo: `${getURL()}dashboard`,
+            emailRedirectTo: `${getURL()}auth/callback`,
           }
         })
         : await supabase.auth.signInWithPassword({ email, password });
@@ -65,7 +65,7 @@ export default function AuthPage() {
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${getURL()}dashboard/settings`,
+        redirectTo: `${getURL()}auth/callback?next=/dashboard/settings`,
       });
       if (error) throw error;
       setMessage("Password reset link sent to your email!");

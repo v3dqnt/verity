@@ -3,9 +3,9 @@ import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  Zap, TrendingUp, Cpu, Camera, ShieldCheck,
-  LogOut, Loader2
-} from "lucide-react";
+  SignalIcon, MagnifyingGlassIcon, PencilSquareIcon,
+  ArrowPathIcon, ArchiveBoxIcon
+} from "@heroicons/react/24/outline";
 import { supabase } from "@/lib/supabase";
 import { motion } from "framer-motion";
 
@@ -59,13 +59,7 @@ export default function Dashboard() {
     getSession();
   }, [router]);
 
-  const handleLogout = async () => {
-    setIsExiting(true);
-    setTimeout(async () => {
-      await supabase.auth.signOut();
-      router.push('/');
-    }, 500);
-  };
+
 
   const navigateWithFade = (e: React.MouseEvent, href: string) => {
     e.preventDefault();
@@ -79,7 +73,7 @@ export default function Dashboard() {
 
   if (loading) return (
     <div className="h-screen bg-black flex items-center justify-center">
-      <Loader2 className="text-emerald-500 animate-spin" size={24} />
+      <ArrowPathIcon className="w-6 h-6 text-emerald-500 animate-spin" />
     </div>
   );
 
@@ -96,175 +90,140 @@ export default function Dashboard() {
         <ShootingStars />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.06)_0%,transparent_70%)] pointer-events-none" />
 
-        {/* FIXED NAV */}
-        <div className="fixed top-0 left-0 w-full z-50 backdrop-blur-md border-b border-white/10 bg-black/40">
-          <div className="max-w-7xl mx-auto px-6 md:px-12 py-6 flex justify-between items-center">
-            <Link href="/" onClick={(e) => navigateWithFade(e, "/")} className="group">
-              <h1 className="text-3xl md:text-4xl font-black tracking-[-0.06em] uppercase italic">
-                VERITY<span className="text-emerald-500">.</span>
-              </h1>
-              <p className="text-[7px] font-mono uppercase tracking-[0.5em] text-zinc-500">Cultural Intelligence</p>
-            </Link>
 
-            {session && (
-              <div className="flex items-center gap-6">
-                <span className="text-sm font-bold text-white uppercase tracking-tighter italic">
-                  {operatorName}
-                </span>
-
-                <button
-                  onClick={handleLogout}
-                  className="group relative flex items-center gap-2 px-4 py-2 bg-white/3 hover:bg-red-500/10 border border-white/10 hover:border-red-500/40 rounded-xl transition-all duration-300"
-                >
-                  <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 group-hover:text-red-400 transition-colors">Term Session</span>
-                  <LogOut size={14} className="text-zinc-500 group-hover:text-red-400 transition-all" />
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
 
         {/* CONTENT AREA */}
         <div className="max-w-7xl w-full z-10 pt-32 px-6 md:px-12">
-          <header className="mb-14 mt-10">
-            <h2 className="text-5xl md:text-6xl font-black tracking-tighter mb-3 uppercase italic leading-none">
+          <header className="mb-14 mt-10 text-center md:text-left relative">
+            <h2 className="text-5xl md:text-7xl font-black tracking-tighter mb-3 uppercase italic leading-none">
               Welcome, <span className="text-emerald-500">{operatorName}</span>
             </h2>
             <p className="text-zinc-400 text-lg md:text-xl max-w-2xl font-light italic">Select an intelligence module to begin your deployment.</p>
           </header>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-[300px]">
-            {/* CONTENT PRODUCER */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            {/* SCRIBE */}
             <Link
               href="/dashboard/orchestrator"
               onClick={(e) => navigateWithFade(e, "/dashboard/orchestrator")}
-              className="md:col-span-2 block group relative rounded-[2.5rem]"
+              className="block group"
             >
               <motion.div
-                whileHover={{ y: -5, scale: 1.01 }}
-                transition={{ duration: 0.4, ease: "easeOut" }}
-                className="h-full w-full liquid-glass p-10 rounded-[2.5rem] flex flex-col justify-between overflow-hidden relative shadow-2xl
-                  hover:shadow-[0_8px_32px_0_rgba(16,185,129,0.3),inset_0_1px_0_rgba(255,255,255,0.3)]"
+                initial="initial"
+                whileHover="hover"
+                variants={{
+                  initial: { scale: 1 },
+                  hover: { scale: 1.05 }
+                }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                className="liquid-glass rounded-[2rem] p-8 hover:border-emerald-500/40 hover:bg-white/8 transition-all duration-300 shadow-xl relative overflow-hidden"
               >
-                {/* Inner Glow */}
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(16,185,129,0.15),transparent_60%)] opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-                <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
+                {/* Illustration Area */}
+                <div className="w-full aspect-square rounded-[1.5rem] mb-6 overflow-hidden relative">
+                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/30 via-emerald-600/10 to-transparent" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-32 h-32 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-3xl flex items-center justify-center shadow-2xl group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500">
+                      <PencilSquareIcon className="w-16 h-16 text-white" />
+                    </div>
+                  </div>
+                  {/* Decorative elements */}
+                  <div className="absolute top-4 right-4 w-16 h-16 bg-emerald-500/20 rounded-full blur-xl group-hover:scale-150 transition-transform duration-700"></div>
+                  <div className="absolute bottom-6 left-6 w-20 h-20 bg-emerald-400/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
+                </div>
 
-                <div className="relative z-10 flex flex-col justify-between h-full">
-                  <div className="w-14 h-14 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-400 group-hover:bg-emerald-500 group-hover:text-black transition-all duration-500 shadow-inner border border-white/5">
-                    <Cpu size={28} />
-                  </div>
-                  <div>
-                    <h3 className="text-3xl font-black italic uppercase text-white tracking-tighter transition-transform group-hover:translate-x-1 duration-300">Content Producer</h3>
-                    <p className="text-zinc-400 text-base mt-2 font-medium italic">Unified content engine. Sync visual DNA and copy strategy.</p>
-                  </div>
+                {/* Title & Description */}
+                <div className="text-center relative z-10">
+                  <h3 className="text-xl font-bold text-white mb-2 group-hover:text-emerald-400 transition-colors">
+                    Scribe
+                  </h3>
+                  <p className="text-sm text-zinc-400 leading-relaxed">
+                    Automated content engine that transforms brand DNA into strategic messaging and high-performing creative assets.
+                  </p>
                 </div>
               </motion.div>
             </Link>
 
-            {/* VIBE SCANNER */}
+            {/* AUDITOR */}
             <Link
               href="/dashboard/scanner"
               onClick={(e) => navigateWithFade(e, "/dashboard/scanner")}
-              className="block group relative rounded-[2.5rem]"
+              className="block group"
             >
               <motion.div
-                whileHover={{ y: -5, scale: 1.02 }}
-                transition={{ duration: 0.4, ease: "easeOut" }}
-                className="h-full w-full liquid-glass p-8 rounded-[2.5rem] flex flex-col justify-between overflow-hidden relative shadow-2xl
-                  hover:shadow-[0_8px_32px_0_rgba(6,182,212,0.3),inset_0_1px_0_rgba(255,255,255,0.3)]"
+                initial="initial"
+                whileHover="hover"
+                variants={{
+                  initial: { scale: 1 },
+                  hover: { scale: 1.05 }
+                }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                className="liquid-glass rounded-[2rem] p-8 hover:border-cyan-500/40 hover:bg-white/8 transition-all duration-300 shadow-xl relative overflow-hidden"
               >
-                {/* Inner Glow */}
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(6,182,212,0.15),transparent_60%)] opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-                <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
+                {/* Illustration Area */}
+                <div className="w-full aspect-square rounded-[1.5rem] mb-6 overflow-hidden relative">
+                  <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/30 via-cyan-600/10 to-transparent" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-32 h-32 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-3xl flex items-center justify-center shadow-2xl group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-500">
+                      <MagnifyingGlassIcon className="w-16 h-16 text-white" />
+                    </div>
+                  </div>
+                  {/* Decorative elements */}
+                  <div className="absolute top-4 right-4 w-16 h-16 bg-cyan-500/20 rounded-full blur-xl group-hover:scale-150 transition-transform duration-700"></div>
+                  <div className="absolute bottom-6 left-6 w-20 h-20 bg-cyan-400/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
+                </div>
 
-                <div className="relative z-10 flex flex-col justify-between h-full">
-                  <div className="w-12 h-12 bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-400 group-hover:bg-cyan-500 group-hover:text-black group-hover:scale-110 transition-all duration-500 shadow-inner border border-white/5">
-                    <Zap size={24} />
-                  </div>
-                  <div>
-                    <h3 className="text-2xl font-black italic uppercase text-white tracking-tighter transition-transform group-hover:translate-x-1">Vibe Scanner</h3>
-                    <p className="text-zinc-400 text-sm mt-2 font-medium italic">Audit scripts for resonance and cringe-detection.</p>
-                  </div>
+                {/* Title & Description */}
+                <div className="text-center relative z-10">
+                  <h3 className="text-xl font-bold text-white mb-2 group-hover:text-cyan-400 transition-colors">
+                    Auditor
+                  </h3>
+                  <p className="text-sm text-zinc-400 leading-relaxed">
+                    Comprehensive analysis of content scripts to detect resonance and ensure cultural alignment.
+                  </p>
                 </div>
               </motion.div>
             </Link>
 
-            {/* TREND RADAR */}
+            {/* RADAR */}
             <Link
               href="/dashboard/radar"
               onClick={(e) => navigateWithFade(e, "/dashboard/radar")}
-              className="block group relative rounded-[2.5rem]"
+              className="block group"
             >
               <motion.div
-                whileHover={{ y: -5, scale: 1.02 }}
-                transition={{ duration: 0.4, ease: "easeOut" }}
-                className="h-full w-full liquid-glass p-8 rounded-[2.5rem] flex flex-col justify-between overflow-hidden relative shadow-2xl
-                  hover:shadow-[0_8px_32px_0_rgba(168,85,247,0.3),inset_0_1px_0_rgba(255,255,255,0.3)]"
+                initial="initial"
+                whileHover="hover"
+                variants={{
+                  initial: { scale: 1 },
+                  hover: { scale: 1.05 }
+                }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                className="liquid-glass rounded-[2rem] p-8 hover:border-purple-500/40 hover:bg-white/8 transition-all duration-300 shadow-xl relative overflow-hidden"
               >
-                {/* Inner Glow */}
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(168,85,247,0.15),transparent_60%)] opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-                <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
-
-                <div className="relative z-10 flex flex-col justify-between h-full">
-                  <div className="w-12 h-12 bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-400 group-hover:bg-purple-500 group-hover:text-black group-hover:scale-110 transition-all duration-500 shadow-inner border border-white/5">
-                    <TrendingUp size={24} />
-                  </div>
-                  <div>
-                    <h3 className="text-2xl font-black italic uppercase text-white tracking-tighter transition-transform group-hover:translate-x-1">Trend Radar</h3>
-                    <p className="text-zinc-400 text-sm mt-2 font-medium italic">Real-time market signals from cultural shifts.</p>
-                  </div>
-                </div>
-              </motion.div>
-            </Link>
-
-            {/* BRAND VAULT */}
-            <Link
-              href="/dashboard/brandvault"
-              onClick={(e) => navigateWithFade(e, "/dashboard/brandvault")}
-              className="block group relative rounded-[2.5rem]"
-            >
-              <motion.div
-                whileHover={{ y: -5, scale: 1.02 }}
-                transition={{ duration: 0.4, ease: "easeOut" }}
-                className="h-full w-full liquid-glass p-8 rounded-[2.5rem] flex flex-col justify-between overflow-hidden relative shadow-2xl
-                   hover:shadow-[0_8px_32px_0_rgba(245,158,11,0.3),inset_0_1px_0_rgba(255,255,255,0.3)]"
-              >
-                {/* Inner Glow */}
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(245,158,11,0.15),transparent_60%)] opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-                <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
-
-                <div className="relative z-10 flex flex-col justify-between h-full">
-                  <div className="w-12 h-12 bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-400 group-hover:bg-amber-500 group-hover:text-black group-hover:scale-110 transition-all duration-500 shadow-inner border border-white/5">
-                    <ShieldCheck size={24} />
-                  </div>
-                  <div>
-                    <h3 className="text-2xl font-black italic uppercase text-white tracking-tighter transition-transform group-hover:translate-x-1">Brand Vault</h3>
-                    <p className="text-zinc-400 text-sm mt-2 font-medium italic">Secure identity repository and brand DNA guidelines.</p>
-                  </div>
-                </div>
-              </motion.div>
-            </Link>
-
-            {/* AD ENGINE (DISABLED) */}
-            <div className="block group relative rounded-[2.5rem] cursor-not-allowed opacity-50">
-              <div className="h-full w-full liquid-glass p-8 rounded-[2.5rem] flex flex-col justify-between overflow-hidden relative shadow-2xl grayscale transition-all">
-                <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
-
-                <div className="relative z-10 flex flex-col justify-between h-full">
-                  <div className="flex justify-between items-start">
-                    <div className="w-12 h-12 bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-600 shadow-inner border border-white/5">
-                      <Camera size={24} />
+                {/* Illustration Area */}
+                <div className="w-full aspect-square rounded-[1.5rem] mb-6 overflow-hidden relative">
+                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500/30 via-purple-600/10 to-transparent" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-32 h-32 bg-gradient-to-br from-purple-500 to-purple-600 rounded-3xl flex items-center justify-center shadow-2xl group-hover:scale-110 group-hover:rotate-6 transition-transform duration-500">
+                      <SignalIcon className="w-16 h-16 text-white" />
                     </div>
-                    <span className="text-[8px] font-mono font-black uppercase tracking-[0.3em] bg-red-500/10 text-red-500 px-3 py-1 rounded-full border border-red-500/20">Offline</span>
                   </div>
-                  <div>
-                    <h3 className="text-2xl font-black italic uppercase text-zinc-500 tracking-tighter">AD ENGINE</h3>
-                    <p className="text-zinc-600 text-sm mt-2 font-medium italic">Generative visual synthesis engine (In Development).</p>
-                  </div>
+                  {/* Decorative elements */}
+                  <div className="absolute top-4 right-4 w-16 h-16 bg-purple-500/20 rounded-full blur-xl group-hover:scale-150 transition-transform duration-700"></div>
+                  <div className="absolute bottom-6 left-6 w-20 h-20 bg-purple-400/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
                 </div>
-              </div>
-            </div>
+
+                {/* Title & Description */}
+                <div className="text-center relative z-10">
+                  <h3 className="text-xl font-bold text-white mb-2 group-hover:text-purple-400 transition-colors">
+                    Radar
+                  </h3>
+                  <p className="text-sm text-zinc-400 leading-relaxed">
+                    Real-time monitoring of global cultural shifts and market signals to keep your brand ahead of the curve.
+                  </p>
+                </div>
+              </motion.div>
+            </Link>
 
           </div>
         </div>
