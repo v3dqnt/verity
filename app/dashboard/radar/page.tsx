@@ -229,13 +229,13 @@ Please create a script that follows this exact format and structure, optimized f
 
 
   return (
-    <main className="min-h-screen bg-[#020202] text-white pt-40 p-6 md:p-12 relative overflow-x-hidden font-sans selection:bg-emerald-500 selection:text-black">
+    <main className="min-h-screen bg-[#020202] text-white pt-32 p-6 md:p-12 relative overflow-x-hidden font-sans selection:bg-emerald-500 selection:text-black">
       <Stars />
       <div className="max-w-7xl mx-auto relative z-10">
 
 
 
-        <header className="mt-20 mb-20">
+        <header className="mt-32 mb-20">
           <div className="flex flex-col gap-12">
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-10">
               <div className="space-y-4">
@@ -331,7 +331,7 @@ Please create a script that follows this exact format and structure, optimized f
               className="liquid-glass border border-white/10 rounded-[3rem] overflow-hidden shadow-2xl bg-black/40"
             >
               {/* MATRIX HEADER */}
-              <div className="bg-white/[0.03] border-b border-white/5 p-8 flex justify-between items-center">
+              <div className="bg-white/[0.03] border-b border-white/5 p-10 flex justify-between items-center">
                 <div className="flex items-center gap-4">
                   <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                   <h2 className="text-xl font-black italic uppercase tracking-tighter text-white">Systematic Intelligence Matrix</h2>
@@ -350,7 +350,7 @@ Please create a script that follows this exact format and structure, optimized f
 
               {/* STRATEGIC OVERVIEW SECTION */}
               {modelThinking && (
-                <div className="p-8 border-b border-white/5 bg-emerald-500/[0.02]">
+                <div className="p-10 border-b border-white/5 bg-emerald-500/[0.02]">
                   <div className="flex items-center gap-3 mb-4">
                     <Sparkles size={16} className="text-emerald-500" />
                     <span className="text-[9px] font-mono uppercase tracking-[0.4em] text-emerald-500">Master Strategic Inquest</span>

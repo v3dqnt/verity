@@ -364,7 +364,7 @@ export default function OrchestratorPage() {
         className={`flex flex-col gap-6 pb-10 w-full ${isHeroMode ? 'xl:col-span-1' : 'lg:grid lg:grid-cols-4 lg:gap-8'}`}
       >
         <div className="space-y-6 lg:col-span-1">
-          <div className="liquid-glass rounded-[2.5rem] p-6 backdrop-blur-md relative overflow-hidden h-full flex flex-col justify-between">
+          <div className="liquid-glass rounded-[2.5rem] p-10 backdrop-blur-md relative overflow-hidden h-full flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-2 text-emerald-500">
@@ -425,7 +425,7 @@ export default function OrchestratorPage() {
           </div>
         </div>
         <div className={`${isHeroMode ? 'xl:col-span-1' : 'lg:col-span-3'} flex flex-col gap-6`}>
-          <div className="liquid-glass rounded-[2.5rem] p-8 md:p-10 backdrop-blur-md">
+          <div className="liquid-glass rounded-[2.5rem] p-10 md:p-16 backdrop-blur-md">
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-3">
                 <ScrollText size={18} className="text-emerald-500" />
@@ -451,7 +451,7 @@ export default function OrchestratorPage() {
             </div>
           </div>
 
-          <div className="liquid-glass rounded-[2.5rem] p-8 md:p-10 backdrop-blur-md h-full overflow-y-auto max-h-[600px] scrollbar-hide">
+          <div className="liquid-glass rounded-[2.5rem] p-10 md:p-16 backdrop-blur-md h-full overflow-y-auto max-h-[600px] scrollbar-hide">
             <div className="flex items-center gap-4 mb-10">
               <ScrollText size={16} className="text-emerald-500" />
               <span className="text-[10px] font-mono text-emerald-500 uppercase tracking-[0.4em]">Produced Script</span>
@@ -497,7 +497,7 @@ export default function OrchestratorPage() {
         <GalaxyHero active={mode === 'improvement'} />
 
         <div className="max-w-[1400px] w-full z-10">
-          <header className="mb-12">
+          <header className="mb-20">
             <h1 className="text-7xl md:text-8xl font-black italic uppercase tracking-tighter mb-12 leading-[0.85]">
               Scribe
             </h1>

@@ -47,7 +47,7 @@ export default function ScannerPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#020202] text-white pt-40 p-6 md:p-12 relative overflow-x-hidden font-sans selection:bg-emerald-500 selection:text-black">
+    <main className="min-h-screen bg-[#020202] text-white pt-32 p-6 md:p-12 relative overflow-x-hidden font-sans selection:bg-emerald-500 selection:text-black">
       <Stars />
       <div className="max-w-7xl mx-auto relative z-10">
 
@@ -55,7 +55,7 @@ export default function ScannerPage() {
 
 
         {/* HEADER */}
-        <header className="mt-20 mb-16">
+        <header className="mt-32 mb-20">
           <h1 className="text-6xl md:text-8xl font-black italic uppercase tracking-tighter leading-none">
             Auditor
           </h1>
@@ -66,7 +66,7 @@ export default function ScannerPage() {
         <div className="w-full">
           <div className="liquid-glass p-1 rounded-[2.5rem] relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent pointer-events-none" />
-            <div className="relative z-10 p-8 md:p-12">
+            <div className="relative z-10 p-10 md:p-16">
               <VibeScanner />
             </div>
           </div>

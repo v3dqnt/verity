@@ -318,7 +318,7 @@ export default function BrandVault() {
 
           <div className="pb-6" /> {/* Top spacer */}
 
-          <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-8 mb-16">
+          <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-8 mb-20">
             <div>
               <h1 className="text-7xl md:text-8xl font-black italic uppercase tracking-tighter leading-none mb-4">
                 Brand <span className="text-emerald-500">/</span> Vault
@@ -340,7 +340,7 @@ export default function BrandVault() {
                 key={brand.id}
                 whileHover={{ y: -5, scale: 1.02 }}
                 transition={{ duration: 0.5, ease: "easeOut" }}
-                className="group relative liquid-glass p-8 rounded-[3rem] transition-all duration-500 ease-out
+                className="group relative liquid-glass p-10 rounded-[3rem] transition-all duration-500 ease-out
                   hover:shadow-[0_8px_32px_0_rgba(16,185,129,0.3),inset_0_1px_0_rgba(255,255,255,0.3)]
                   shadow-2xl overflow-hidden flex flex-col justify-between"
               >

@@ -94,8 +94,8 @@ export default function Dashboard() {
 
         {/* CONTENT AREA */}
         <div className="max-w-7xl w-full z-10 pt-32 px-6 md:px-12">
-          <header className="mb-14 mt-10 text-center md:text-left relative">
-            <h2 className="text-5xl md:text-7xl font-black tracking-tighter mb-3 uppercase italic leading-none">
+          <header className="mt-12 mb-20 text-center md:text-left relative">
+            <h2 className="text-5xl md:text-7xl font-black tracking-tighter mb-4 uppercase italic leading-none">
               Welcome, <span className="text-emerald-500">{operatorName}</span>
             </h2>
             <p className="text-zinc-400 text-lg md:text-xl max-w-2xl font-light italic">Select an intelligence module to begin your deployment.</p>
@@ -116,7 +116,7 @@ export default function Dashboard() {
                   hover: { scale: 1.05 }
                 }}
                 transition={{ duration: 0.2, ease: "easeOut" }}
-                className="liquid-glass rounded-[2rem] p-8 hover:border-emerald-500/40 hover:bg-white/8 transition-all duration-300 shadow-xl relative overflow-hidden"
+                className="liquid-glass rounded-[2rem] p-10 hover:border-emerald-500/40 hover:bg-white/8 transition-all duration-300 shadow-xl relative overflow-hidden"
               >
                 {/* Illustration Area */}
                 <div className="w-full aspect-square rounded-[1.5rem] mb-6 overflow-hidden relative">
@@ -157,7 +157,7 @@ export default function Dashboard() {
                   hover: { scale: 1.05 }
                 }}
                 transition={{ duration: 0.2, ease: "easeOut" }}
-                className="liquid-glass rounded-[2rem] p-8 hover:border-cyan-500/40 hover:bg-white/8 transition-all duration-300 shadow-xl relative overflow-hidden"
+                className="liquid-glass rounded-[2rem] p-10 hover:border-cyan-500/40 hover:bg-white/8 transition-all duration-300 shadow-xl relative overflow-hidden"
               >
                 {/* Illustration Area */}
                 <div className="w-full aspect-square rounded-[1.5rem] mb-6 overflow-hidden relative">
@@ -198,7 +198,7 @@ export default function Dashboard() {
                   hover: { scale: 1.05 }
                 }}
                 transition={{ duration: 0.2, ease: "easeOut" }}
-                className="liquid-glass rounded-[2rem] p-8 hover:border-purple-500/40 hover:bg-white/8 transition-all duration-300 shadow-xl relative overflow-hidden"
+                className="liquid-glass rounded-[2rem] p-10 hover:border-purple-500/40 hover:bg-white/8 transition-all duration-300 shadow-xl relative overflow-hidden"
               >
                 {/* Illustration Area */}
                 <div className="w-full aspect-square rounded-[1.5rem] mb-6 overflow-hidden relative">
