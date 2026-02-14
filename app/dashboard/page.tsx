@@ -137,7 +137,7 @@ export default function Dashboard() {
                     Scribe
                   </h3>
                   <p className="text-sm text-zinc-400 leading-relaxed">
-                    Automated content engine that transforms brand DNA into strategic messaging and high-performing creative assets.
+                    Advanced script engine that creates and improves high-performance scripts for UGC, advertisements, and social content.
                   </p>
                 </div>
               </motion.div>
