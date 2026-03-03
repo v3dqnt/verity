@@ -3,7 +3,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { HomeIcon, ArchiveBoxIcon, SignalIcon, MagnifyingGlassIcon, PencilSquareIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
+import { HomeIcon, ArchiveBoxIcon, SignalIcon, MagnifyingGlassIcon, PencilSquareIcon, ArrowRightOnRectangleIcon, VideoCameraIcon } from '@heroicons/react/24/outline';
 import { supabase } from '@/lib/supabase';
 
 const navItems = [
@@ -11,6 +11,7 @@ const navItems = [
     { href: '/dashboard/radar', key: 'radar', label: 'Radar', icon: SignalIcon },
     { href: '/dashboard/scanner', key: 'scanner', label: 'Auditor', icon: MagnifyingGlassIcon },
     { href: '/dashboard/orchestrator', key: 'deploy', label: 'Scribe', icon: PencilSquareIcon },
+    { href: '/dashboard/vision', key: 'vision', label: 'Vision', icon: VideoCameraIcon },
 ];
 
 export default function FloatingNav() {

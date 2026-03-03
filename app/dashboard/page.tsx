@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   SignalIcon, MagnifyingGlassIcon, PencilSquareIcon,
-  ArrowPathIcon, ArchiveBoxIcon
+  ArrowPathIcon, EyeIcon
 } from "@heroicons/react/24/outline";
 import { supabase } from "@/lib/supabase";
 import { motion } from "framer-motion";
@@ -101,49 +101,8 @@ export default function Dashboard() {
             <p className="text-zinc-400 text-lg md:text-xl max-w-2xl font-light italic">Select an intelligence module to begin your deployment.</p>
           </header>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {/* SCRIBE */}
-            <Link
-              href="/dashboard/orchestrator"
-              onClick={(e) => navigateWithFade(e, "/dashboard/orchestrator")}
-              className="block group"
-            >
-              <motion.div
-                initial="initial"
-                whileHover="hover"
-                variants={{
-                  initial: { scale: 1 },
-                  hover: { scale: 1.05 }
-                }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
-                className="liquid-glass rounded-[2rem] p-10 hover:border-emerald-500/40 hover:bg-white/8 transition-all duration-300 shadow-xl relative overflow-hidden"
-              >
-                {/* Illustration Area */}
-                <div className="w-full aspect-square rounded-[1.5rem] mb-6 overflow-hidden relative">
-                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/30 via-emerald-600/10 to-transparent" />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-32 h-32 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-3xl flex items-center justify-center shadow-2xl group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500">
-                      <PencilSquareIcon className="w-16 h-16 text-white" />
-                    </div>
-                  </div>
-                  {/* Decorative elements */}
-                  <div className="absolute top-4 right-4 w-16 h-16 bg-emerald-500/20 rounded-full blur-xl group-hover:scale-150 transition-transform duration-700"></div>
-                  <div className="absolute bottom-6 left-6 w-20 h-20 bg-emerald-400/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
-                </div>
-
-                {/* Title & Description */}
-                <div className="text-center relative z-10">
-                  <h3 className="text-xl font-bold text-white mb-2 group-hover:text-emerald-400 transition-colors">
-                    Scribe
-                  </h3>
-                  <p className="text-sm text-zinc-400 leading-relaxed">
-                    Advanced script engine that creates and improves high-performance scripts for UGC, advertisements, and social content.
-                  </p>
-                </div>
-              </motion.div>
-            </Link>
-
-            {/* AUDITOR */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto pb-20">
+            {/* AUDITOR (Large) */}
             <Link
               href="/dashboard/scanner"
               onClick={(e) => navigateWithFade(e, "/dashboard/scanner")}
@@ -152,15 +111,12 @@ export default function Dashboard() {
               <motion.div
                 initial="initial"
                 whileHover="hover"
-                variants={{
-                  initial: { scale: 1 },
-                  hover: { scale: 1.05 }
-                }}
+                variants={{ initial: { scale: 1 }, hover: { scale: 1.05 } }}
                 transition={{ duration: 0.2, ease: "easeOut" }}
-                className="liquid-glass rounded-[2rem] p-10 hover:border-cyan-500/40 hover:bg-white/8 transition-all duration-300 shadow-xl relative overflow-hidden"
+                className="liquid-glass rounded-[2rem] p-8 md:p-10 hover:border-cyan-500/40 hover:bg-white/8 transition-all duration-300 shadow-xl relative overflow-hidden h-full flex flex-col"
               >
                 {/* Illustration Area */}
-                <div className="w-full aspect-square rounded-[1.5rem] mb-6 overflow-hidden relative">
+                <div className="w-full h-56 rounded-[1.5rem] mb-6 overflow-hidden relative">
                   <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/30 via-cyan-600/10 to-transparent" />
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="w-32 h-32 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-3xl flex items-center justify-center shadow-2xl group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-500">
@@ -173,18 +129,55 @@ export default function Dashboard() {
                 </div>
 
                 {/* Title & Description */}
-                <div className="text-center relative z-10">
+                <div className="text-center relative z-10 flex-grow flex flex-col justify-end">
                   <h3 className="text-xl font-bold text-white mb-2 group-hover:text-cyan-400 transition-colors">
                     Auditor
                   </h3>
-                  <p className="text-sm text-zinc-400 leading-relaxed">
+                  <p className="text-sm text-zinc-400 leading-relaxed max-w-lg mx-auto">
                     Comprehensive analysis of content scripts to detect resonance and ensure cultural alignment.
                   </p>
                 </div>
               </motion.div>
             </Link>
 
-            {/* RADAR */}
+            {/* VISION (Small) */}
+            <Link
+              href="/dashboard/vision"
+              onClick={(e) => navigateWithFade(e, "/dashboard/vision")}
+              className="block group"
+            >
+              <motion.div
+                initial="initial"
+                whileHover="hover"
+                variants={{ initial: { scale: 1 }, hover: { scale: 1.05 } }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                className="liquid-glass rounded-[2rem] p-8 md:p-10 hover:border-orange-500/40 hover:bg-white/8 transition-all duration-300 shadow-xl relative overflow-hidden h-full flex flex-col"
+              >
+                {/* Illustration Area */}
+                <div className="w-full h-56 rounded-[1.5rem] mb-6 overflow-hidden relative">
+                  <div className="absolute inset-0 bg-gradient-to-br from-orange-500/30 via-orange-600/10 to-transparent" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-32 h-32 bg-gradient-to-br from-orange-500 to-orange-600 rounded-3xl flex items-center justify-center shadow-2xl group-hover:scale-110 group-hover:rotate-6 transition-transform duration-500">
+                      <EyeIcon className="w-16 h-16 text-white" />
+                    </div>
+                  </div>
+                  <div className="absolute top-4 right-4 w-16 h-16 bg-orange-500/20 rounded-full blur-xl group-hover:scale-150 transition-transform duration-700"></div>
+                  <div className="absolute bottom-6 left-6 w-20 h-20 bg-orange-400/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
+                </div>
+
+                {/* Title & Description */}
+                <div className="text-center relative z-10 flex-grow flex flex-col justify-end">
+                  <h3 className="text-xl font-bold text-white mb-2 group-hover:text-orange-400 transition-colors">
+                    Vision Studio
+                  </h3>
+                  <p className="text-sm text-zinc-400 leading-relaxed">
+                    A.I. native video analysis. Break down shorts and reels to find exactly why they will flop or go viral.
+                  </p>
+                </div>
+              </motion.div>
+            </Link>
+
+            {/* RADAR (Small) */}
             <Link
               href="/dashboard/radar"
               onClick={(e) => navigateWithFade(e, "/dashboard/radar")}
@@ -193,41 +186,73 @@ export default function Dashboard() {
               <motion.div
                 initial="initial"
                 whileHover="hover"
-                variants={{
-                  initial: { scale: 1 },
-                  hover: { scale: 1.05 }
-                }}
+                variants={{ initial: { scale: 1 }, hover: { scale: 1.05 } }}
                 transition={{ duration: 0.2, ease: "easeOut" }}
-                className="liquid-glass rounded-[2rem] p-10 hover:border-purple-500/40 hover:bg-white/8 transition-all duration-300 shadow-xl relative overflow-hidden"
+                className="liquid-glass rounded-[2rem] p-8 md:p-10 hover:border-purple-500/40 hover:bg-white/8 transition-all duration-300 shadow-xl relative overflow-hidden h-full flex flex-col"
               >
                 {/* Illustration Area */}
-                <div className="w-full aspect-square rounded-[1.5rem] mb-6 overflow-hidden relative">
+                <div className="w-full h-56 rounded-[1.5rem] mb-6 overflow-hidden relative">
                   <div className="absolute inset-0 bg-gradient-to-br from-purple-500/30 via-purple-600/10 to-transparent" />
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="w-32 h-32 bg-gradient-to-br from-purple-500 to-purple-600 rounded-3xl flex items-center justify-center shadow-2xl group-hover:scale-110 group-hover:rotate-6 transition-transform duration-500">
                       <SignalIcon className="w-16 h-16 text-white" />
                     </div>
                   </div>
-                  {/* Decorative elements */}
                   <div className="absolute top-4 right-4 w-16 h-16 bg-purple-500/20 rounded-full blur-xl group-hover:scale-150 transition-transform duration-700"></div>
                   <div className="absolute bottom-6 left-6 w-20 h-20 bg-purple-400/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
                 </div>
 
                 {/* Title & Description */}
-                <div className="text-center relative z-10">
+                <div className="text-center relative z-10 flex-grow flex flex-col justify-end">
                   <h3 className="text-xl font-bold text-white mb-2 group-hover:text-purple-400 transition-colors">
                     Radar
                   </h3>
                   <p className="text-sm text-zinc-400 leading-relaxed">
-                    Real-time monitoring of global cultural shifts and market signals to keep your brand ahead of the curve.
+                    Real-time monitoring of global cultural shifts and market signals to keep your brand ahead.
                   </p>
                 </div>
               </motion.div>
             </Link>
 
-          </div>
-        </div>
-      </motion.div>
-    </main>
+            {/* SCRIBE (Large) */}
+            <Link
+              href="/dashboard/orchestrator"
+              onClick={(e) => navigateWithFade(e, "/dashboard/orchestrator")}
+              className="block group"
+            >
+              <motion.div
+                initial="initial"
+                whileHover="hover"
+                variants={{ initial: { scale: 1 }, hover: { scale: 1.05 } }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                className="liquid-glass rounded-[2rem] p-8 md:p-10 hover:border-emerald-500/40 hover:bg-white/8 transition-all duration-300 shadow-xl relative overflow-hidden h-full flex flex-col"
+              >
+                {/* Illustration Area */}
+                <div className="w-full h-56 rounded-[1.5rem] mb-6 overflow-hidden relative">
+                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/30 via-emerald-600/10 to-transparent" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-32 h-32 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-3xl flex items-center justify-center shadow-2xl group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500">
+                      <PencilSquareIcon className="w-16 h-16 text-white" />
+                    </div>
+                  </div>
+                  <div className="absolute top-4 right-4 w-16 h-16 bg-emerald-500/20 rounded-full blur-xl group-hover:scale-150 transition-transform duration-700"></div>
+                  <div className="absolute bottom-6 left-6 w-20 h-20 bg-emerald-400/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
+                </div>
+
+                {/* Title & Description */}
+                <div className="text-center relative z-10 flex-grow flex flex-col justify-end">
+                  <h3 className="text-xl font-bold text-white mb-2 group-hover:text-emerald-400 transition-colors">
+                    Scribe
+                  </h3>
+                  <p className="text-sm text-zinc-400 leading-relaxed max-w-lg mx-auto">
+                    Advanced script engine that creates and improves high-performance scripts for UGC, advertisements, and social content.
+                  </p>
+                </div>
+              </motion.div>
+            </Link>
+          </div >
+        </div >
+      </motion.div >
+    </main >
   );
 }
