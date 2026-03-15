@@ -87,6 +87,18 @@ export async function GET(req: Request) {
     const industry = brandContext?.industry ? String(brandContext.industry) : (intent || "general");
     const today = new Date().toDateString();
 
+    const normalizedBrandId = (brandId && brandId !== 'null' && brandId !== 'undefined') ? brandId : 'nobrand';
+    const normalizedIntent = intent?.trim().toLowerCase() || 'general';
+    const cacheKey = `radar_${normalizedBrandId}_${normalizedIntent}`;
+    const { data: cached } = await supabaseAdmin
+      .from('radar_cache')
+      .select('result, created_at')
+      .eq('cache_key', cacheKey)
+      .gte('created_at', new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString())
+      .maybeSingle();
+
+    if (cached) return NextResponse.json(cached.result);
+
     const brandPromptPart = brandContext ? `
       BRAND IDENTITY DEEP DIVE:
       - Overview Summary: ${brandContext.brand_summary || 'N/A'}
@@ -158,34 +170,7 @@ export async function GET(req: Request) {
       ? `EXCLUSION LIST (Do not suggest these): ${Array.from(savedTopics).join(", ")}`
       : "";
 
-    const categoryContext = industry && industry !== "general"
-      ? `INDUSTRY FOCUS: ${industry}`
-      : "";
-
-
-    const platforms = ["Instagram", "YouTube", "Twitter"];
     const industrySegment = industry || "general";
-
-    const baseQueries = [
-      `what video format is trending in ${industrySegment} on Instagram`,
-      `what video format is trending in ${industrySegment} on YouTube`,
-      `what content style is blowing up in ${industrySegment} Instagram Reels`,
-      `what Shorts format is trending in ${industrySegment} YouTube`,
-      `top viral ${industrySegment} creators this week`,
-      `trending ${industrySegment} hashtags on Instagram`,
-      `trending ${industrySegment} YouTube Shorts this week`
-    ];
-
-    const intentQueries = intent
-      ? [
-        `best performing ${industrySegment} videos for ${intent} on Instagram`,
-        `best performing ${industrySegment} videos for ${intent} on YouTube`,
-        `how ${industrySegment} brands are going viral on Instagram`,
-        `how ${industrySegment} creators are going viral on YouTube`
-      ]
-      : [];
-
-    const allQueries = [...baseQueries, ...intentQueries];
 
     const instructions = `
 DATE: ${today}
@@ -193,11 +178,13 @@ DATE: ${today}
 ROLE:
 You are a platform-native trend analyst for Instagram Reels and YouTube Shorts. Your task is to find high-velocity trends and validate them for the specific brand context.
 
-RESEARCH MANDATE:
-Before selecting any trends, mentally simulate searching these exact queries:
-${allQueries.map(q => `- ${q}`).join("\n")}
-
-You are ONLY allowed to select trends that would realistically appear from these searches.
+RESEARCH MANDATE: You MUST call web_search at least 4 times before selecting any trend.
+Required searches:
+1. "trending ${industrySegment} video format Instagram Reels ${new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}"
+2. "viral ${industrySegment} YouTube Shorts format this week"
+3. "${intent} content going viral Instagram ${new Date().getFullYear()}"
+4. "top ${industrySegment} creators YouTube format trend"
+Only select trends that appear in your search results. If you cannot find evidence, do not include the trend.
 
 GOAL:
 Return exactly 3 REAL trends that:
@@ -240,6 +227,12 @@ EVIDENCE REQUIREMENTS:
 - 'source_evidence' must reference real observable behavior.
 - 'example_urls' must be plausible Instagram or YouTube URLs.
 - 'source_links' must be plausible hashtag or discovery pages.
+
+SELF-AUDIT BEFORE OUTPUTTING:
+- Remove any trend that sounds invented or corporate.
+- Ensure all format_explanations describe how creators actually film this.
+- If a trend wouldn't feel native to this brand, replace it.
+Only output trends that pass this check.
 
 OUTPUT CONTRACT:
 Return ONLY valid JSON:
@@ -285,65 +278,20 @@ Return ONLY valid JSON:
     const cleanText = rawText.replace(/```json/g, "").replace(/```/g, "").trim();
     let parsedData = JSON.parse(cleanText);
 
-    // --- STEP 2: GPT-5 VALIDATOR PASS ---
-    try {
-      console.log("Starting GPT-5 Mini Validator Pass...");
-      const validatorPrompt = `
-        You are a ruthless brand + culture editor. Review these trends for the brand context provided.
-
-        BRAND CONTEXT:
-        ${brandPromptPart}
-
-        USER INTENT:
-        ${intent || "global impact"}
-
-        INPUT TRENDS:
-        ${JSON.stringify(parsedData.trends, null, 2)}
-
-        TASK:
-        1. Remove any trend that sounds fake, corporate-cringe, or off-brand.
-        2. Ensure hooks and format explanations sound creator-native.
-        3. Rewrite descriptions to reflect real high-velocity behavior.
-        4. Return the same JSON structure with 'thinking' and 'trends' (Exactly 3).
-      `;
-
-      const validationResponse = await openai.responses.create({
-        model: "gpt-5-mini",
-        input: validatorPrompt,
+    const validated = TrendSchema.safeParse(parsedData);
+    if (!validated.success) {
+      // Try extracting just the trends array if top-level structure is off
+      const fallback = TrendSchema.safeParse({
+        thinking: parsedData?.thinking || "N/A",
+        trends: parsedData?.trends || []
       });
-
-      const validatedText = validationResponse.output_text || "{}";
-      const cleanValidated = validatedText.replace(/```json/g, "").replace(/```/g, "").trim();
-      parsedData = JSON.parse(cleanValidated);
-    } catch (valErr) {
-      console.warn("Validator Pass Failed (using raw research):", valErr);
+      if (!fallback.success) throw new Error("AI output was invalid.");
+      parsedData = fallback.data;
+    } else {
+      parsedData = validated.data;
     }
 
-    // --- STEP 3: URL VALIDATION PASS ---
-    const validateUrl = async (url: string) => {
-      if (!url || url.includes("example.com") || url.includes("PLACEHOLDER")) return null;
-      try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 3000);
-        const res = await fetch(url, {
-          method: 'HEAD',
-          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' },
-          signal: controller.signal
-        });
-        clearTimeout(timeout);
-        return res.ok ? url : null;
-      } catch {
-        return null;
-      }
-    };
-
-    console.log("Validating signal URLs...");
-    const posts = await Promise.all((parsedData.trends || []).map(async (item: any, idx: number) => {
-      const [validExamples, validSources] = await Promise.all([
-        Promise.all((item.example_urls || []).map(validateUrl)),
-        Promise.all((item.source_links || []).map(validateUrl))
-      ]);
-
+    const posts = (parsedData.trends || []).map((item: any, idx: number) => {
       return {
         id: `trend-${idx}-${Date.now()}`,
         name: item.name,
@@ -355,18 +303,26 @@ Return ONLY valid JSON:
         isSaved: savedTopics.has(item.name),
         ugc_strategy: item.ugc_strategy,
         source_evidence: item.source_evidence,
-        example_urls: validExamples.filter(Boolean),
-        source_links: validSources.filter(Boolean)
+        example_urls: item.example_urls,
+        source_links: item.source_links
       };
-    }));
-
-    return NextResponse.json({
-      posts,
-      thinking: parsedData.thinking,
-      intelligence: {
-        raw_output: rawText
-      }
     });
+
+    const result = {
+      posts,
+      thinking: parsedData.thinking
+    };
+
+    // Cache the result asynchronously without awaiting if possible, but fine to await usually
+    supabaseAdmin.from('radar_cache').upsert({
+      cache_key: cacheKey,
+      result: result
+    }).then(
+      () => console.log('Radar cache updated for key', cacheKey),
+      (e: any) => console.error('Cache save failed', e)
+    );
+
+    return NextResponse.json(result);
 
   } catch (error: unknown) {
     const errorMsg = error instanceof Error ? error.message : String(error);

@@ -9,8 +9,11 @@ import { supabase } from '@/lib/supabase';
 
 export function VibeScanner() {
   const [input, setInput] = useState('');
+  const [platform, setPlatform] = useState('default');
   const [loading, setLoading] = useState(false);
+  const [improving, setImproving] = useState(false);
   const [result, setResult] = useState<any>(null);
+  const [improvedScript, setImprovedScript] = useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [showThinking, setShowThinking] = useState(false);
@@ -44,7 +47,7 @@ export function VibeScanner() {
       const res = await fetch('/api/ai/trust-score', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: input, userId }), // Pass userId for saving/deduping
+        body: JSON.stringify({ content: input, userId, platform }), // Pass userId and platform
       });
       const data = await res.json();
       setResult(data);
@@ -53,6 +56,25 @@ export function VibeScanner() {
       alert("Analysis failed. System busy.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleImprove = async () => {
+    if (!input) return;
+    setImproving(true);
+    try {
+      const res = await fetch('/api/ai/trust-score', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'improve', content: input, userId, platform }),
+      });
+      const data = await res.json();
+      setImprovedScript(data);
+      if (userId) fetchHistory(userId); // Refresh history to show new improvement
+    } catch (err) {
+      alert("Improvement failed. System busy.");
+    } finally {
+      setImproving(false);
     }
   };
 
@@ -100,7 +122,13 @@ export function VibeScanner() {
   };
 
   const loadFromHistory = (item: any) => {
-    setResult(item.result);
+    if (item.result.is_improvement) {
+      setImprovedScript(item.result);
+      setResult(null); // Clear audit result so only the improvement shows
+    } else {
+      setResult(item.result);
+      setImprovedScript(null);
+    }
     setInput(item.content);
     setShowHistory(false);
     setActiveCriteria(null);
@@ -125,7 +153,10 @@ export function VibeScanner() {
                     <span className={`text-xl font-black ${item.score >= 80 ? 'text-emerald-500' : item.score >= 50 ? 'text-yellow-500' : 'text-zinc-500'}`}>
                       {item.score}/100
                     </span>
-                    <span className="text-[10px] text-zinc-500 font-mono">{new Date(item.created_at).toLocaleDateString()}</span>
+                    <span className="text-[10px] text-zinc-500 font-mono">
+                      {new Date(item.created_at).toLocaleDateString()}
+                      {item.result?.is_improvement && ' - IMPROVED'}
+                    </span>
                   </div>
                   <p className="text-xs text-zinc-400 line-clamp-2 font-mono">{item.content}</p>
                 </div>
@@ -154,6 +185,20 @@ export function VibeScanner() {
 
       {/* 1. INPUT BOX */}
       <div className="bg-zinc-900/50 border border-white/10 rounded-[2rem] p-8 shadow-2xl backdrop-blur-md">
+        <div className="flex flex-wrap gap-3 mb-6">
+          {['default', 'tiktok', 'reels', 'shorts'].map(p => (
+            <button
+              key={p}
+              onClick={() => setPlatform(p)}
+              className={`px-5 py-2 rounded-full text-xs font-mono uppercase tracking-widest transition-all
+                ${platform === p 
+                  ? 'bg-emerald-500 text-black shadow-[0_0_15px_rgba(16,185,129,0.4)]' 
+                  : 'bg-zinc-800/50 text-zinc-400 hover:bg-zinc-800 hover:text-white border border-white/5'}`}
+            >
+              {p === 'default' ? 'General' : p}
+            </button>
+          ))}
+        </div>
         <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -183,14 +228,15 @@ export function VibeScanner() {
       </div>
 
       {/* 2. FULL ANALYSIS REPORT */}
-      {result && (
+      {(result || improvedScript) && (
         <div className="animate-in fade-in slide-in-from-bottom-8 duration-1000 space-y-8 pb-20">
 
-          {/* HEADER SCORES */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
-            {/* MAIN SCORE & FEEDBACK */}
-            <div className="lg:col-span-2 bg-zinc-900/80 border border-white/5 p-10 rounded-[3rem] backdrop-blur-sm relative overflow-hidden group">
+          {result && (
+            <>
+              {/* HEADER SCORES */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* MAIN SCORE & FEEDBACK */}
+                <div className="lg:col-span-2 bg-zinc-900/80 border border-white/5 p-10 rounded-[3rem] backdrop-blur-sm relative overflow-hidden group">
               <div className="absolute top-0 right-0 p-8 flex gap-3">
                 {/* THINKING BUTTON */}
                 {result.thinking && (
@@ -256,6 +302,16 @@ export function VibeScanner() {
                 {result.redFlags.length === 0 && (
                   <p className="text-emerald-500/50 text-sm italic">No cringe detected. You're clear.</p>
                 )}
+              </div>
+              <div className="mt-8 pt-6 border-t border-white/5 flex flex-col gap-4">
+                <button
+                  onClick={handleImprove}
+                  disabled={improving}
+                  className="w-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 font-bold py-3 rounded-xl border border-emerald-500/20 transition-all flex items-center justify-center gap-2 group"
+                >
+                  {improving ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} className="group-hover:rotate-12 transition-transform" />}
+                  {improving ? "GENERATING IMPROVEMENTS..." : "AUTO-IMPROVE SCRIPT"}
+                </button>
               </div>
             </div>
           </div>
@@ -375,6 +431,49 @@ export function VibeScanner() {
             </div>
 
           </div>
+          </>
+          )}
+
+          {/* IMPROVED SCRIPT OUTPUT */}
+          {improvedScript && (
+            <div className="bg-zinc-900 border border-emerald-500/20 p-10 rounded-[3rem] animate-in fade-in slide-in-from-bottom-8">
+              <div className="flex items-center gap-3 mb-8">
+                <Sparkles className="text-emerald-500" size={24} />
+                <h2 className="text-2xl font-black italic uppercase text-white">Improved Script: {improvedScript.title}</h2>
+                <div className="ml-auto text-emerald-500 font-mono text-xl font-bold">
+                  {improvedScript.authenticityScore}<span className="text-sm text-zinc-500">/100 Authenticity</span>
+                </div>
+              </div>
+
+              {improvedScript.improvements?.length > 0 && (
+                <div className="mb-10 space-y-4">
+                  <h3 className="text-zinc-500 text-[10px] font-mono uppercase tracking-[0.3em]">Key Improvements</h3>
+                  {improvedScript.improvements.map((imp: any, idx: number) => (
+                    <div key={idx} className="bg-zinc-800/50 p-4 rounded-xl border border-white/5">
+                      <p className="text-xs text-red-400 line-through mb-1">{imp.original}</p>
+                      <p className="text-sm text-emerald-400 mb-2">{imp.tweak}</p>
+                      <p className="text-[10px] text-zinc-500 font-mono italic">Reasoning: {imp.reasoning}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div>
+                <h3 className="text-zinc-500 text-[10px] font-mono uppercase tracking-[0.3em] mb-4">Final Script Beats</h3>
+                <div className="space-y-4">
+                  {improvedScript.script?.map((beat: any, i: number) => (
+                    <div key={i} className="flex gap-4 p-4 border border-white/5 rounded-xl hover:border-emerald-500/30 transition-colors bg-zinc-800/30 group">
+                      <div className="w-12 text-zinc-500 font-mono text-xs pt-1">{beat.timestamp}</div>
+                      <div className="flex-1 space-y-1">
+                        <p className="text-xs text-emerald-500/70 font-mono uppercase tracking-widest">{beat.speaker} <span className="text-zinc-600">|</span> {beat.action}</p>
+                        <p className="text-zinc-200 text-sm leading-relaxed">{beat.dialogue}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
         </div>
       )}

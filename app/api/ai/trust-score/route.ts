@@ -13,6 +13,25 @@ async function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+const platformProfiles: Record<string, { weights: string, context: string }> = {
+  tiktok: {
+    weights: "Hook ×2.5, Incongruency ×2.0, Retention ×1.5, Simplicity ×1.5, Emotional Trigger ×1.0, Shareability ×0.5, Clarity ×0.5, Personal Touch ×0.5, Takeaway ×0.0",
+    context: "TIKTOK ALGORITHM: Focus heavily on the first 1.5 seconds. The 'For You' page demands immediate pattern interrupts. High incongruency and raw, unpolished energy perform best. Penalize slow build-ups heavily."
+  },
+  reels: {
+    weights: "Shareability ×2.5, Hook ×1.5, Simplicity ×1.5, Emotional Trigger ×1.5, Clarity ×1.0, Retention ×1.0, Incongruency ×0.5, Personal Touch ×0.5, Takeaway ×0.0",
+    context: "INSTAGRAM REELS ALGORITHM: Focus on visual aesthetics and social currency. Reels are heavily driven by users sharing to their Stories or DMs. If it doesn't make the user look cool/funny/insider to share it, penalize the score."
+  },
+  shorts: {
+    weights: "Retention ×2.5, Clarity ×2.0, Hook ×1.5, Takeaway ×1.5, Simplicity ×1.0, Personal Touch ×0.5, Emotional Trigger ×0.5, Incongruency ×0.5, Shareability ×0.0",
+    context: "YOUTUBE SHORTS ALGORITHM: Focus on narrative loop and satisfaction. YouTube viewers tolerate slightly longer setups but demand high clarity and a strong takeaway/payoff. Penalize clickbait hooks that don't deliver."
+  },
+  default: {
+    weights: "Hook ×2.0, Clarity ×2.0, Incongruency ×1.5, Simplicity ×1.5, Emotional Trigger ×1.5, Retention ×1.5, Shareability ×1.5, Personal Touch ×1.0, Takeaway ×0.5",
+    context: "GENERAL SHORT-FORM ALGORITHM: Balance the hook with clear delivery and strong emotional resonance."
+  }
+};
+
 async function fetchWithRetry(fn: () => Promise<any>, retries = MAX_RETRIES, backoff = INITIAL_BACKOFF): Promise<any> {
   try {
     return await fn();
@@ -52,32 +71,84 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const { content, userId } = await req.json();
+    const { content, userId, platform = 'default', action = 'audit' } = await req.json();
 
     if (!content) return NextResponse.json({ error: "No content provided" }, { status: 400 });
 
+    if (action === 'improve') {
+      const improvePrompt = `[MISSION: SCRIPT IMPROVEMENT]
+You are a ruthless viral script editor.
+Goal: Take the provided draft and transform it into a high-retention performance script for ${platform}.
+
+INPUT DRAFT:
+"${content}"
+
+Process:
+1. Critique: Analyze the existing script against virality criteria (Hook, Pacing, Clarity, Relatability).
+2. Tweak & Polish: Rewrite lines to increase impact, remove fluff, and add emotional texture.
+3. Humanize: Add creator-native "imperfections" (hesitations, pauses, relief).
+
+Output Requirement (STRICT):
+You MUST return a JSON object containing:
+1. "improvements": An array of objects: { "original": string, "tweak": string, "reasoning": string }.
+2. "script": An array of script beats: { "timestamp": string, "speaker": string, "action": string, "dialogue": string }.
+3. "title": A punchy viral title.
+4. "authenticityScore": 0-100.
+`;
+
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      const completion = await fetchWithRetry(() => openai.chat.completions.create({
+        model: "gpt-5.4", // Strong model for improvement pass
+        messages: [
+          { role: "system", content: "You are an expert script improver." },
+          { role: "user", content: improvePrompt }
+        ],
+        response_format: { type: "json_object" }
+      }));
+
+      const improvedResult = JSON.parse(completion.choices[0].message.content || "{}");
+      improvedResult.is_improvement = true;
+
+      if (userId) {
+        const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+        await supabaseAdmin.from('audit_history').insert({
+          user_id: userId,
+          content: content,
+          score: improvedResult.authenticityScore || 0,
+          result: improvedResult
+        });
+      }
+
+      return NextResponse.json(improvedResult);
+    }
+
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+    const targetPlatform = platform.toLowerCase();
+    const profile = platformProfiles[targetPlatform] || platformProfiles['default'];
 
     // 1. CHECKSUM / CACHE CHECK
     // We check if this exact content has been audited for this user before.
-    // "Maintain the score if the same script is being audited twice"
     if (userId) {
-      const { data: existing } = await supabaseAdmin
+      const { data: existingList } = await supabaseAdmin
         .from('audit_history')
         .select('result')
         .eq('user_id', userId)
-        .eq('content', content) // minor tweaks = diff content = new audit
-        .maybeSingle();
+        .eq('content', content); // minor tweaks = diff content = new audit
 
-      if (existing) {
-        return NextResponse.json({ ...existing.result, _cached: true });
+      if (existingList && existingList.length > 0) {
+        const exactMatch = existingList.find((row) => (row.result?.platform || 'default') === targetPlatform);
+        if (exactMatch) {
+          return NextResponse.json({ ...exactMatch.result, _cached: true });
+        }
       }
     }
 
     const prompt = `Analyze this short-form script or content: "${content}".
 
 YOU ARE A CREATOR-CRITICAL VIRAL CONTENT STRATEGIST.
-You are a ruthless auditor. You assume viewers are impatient and the algorithm is unforgiving. Your goal is to separate "Corporate/Lecture" fluff from "Platform Weapons."
+You are a ruthless auditor evaluating this script specifically for: ${targetPlatform.toUpperCase()}.
+
+${profile.context}
 
 EVALUATION FRAMEWORK: THE MERGED MRI MECHANISM
 
@@ -119,8 +190,8 @@ MULTILINGUAL RULES:
 
 SCORING RULES:
 - Be deterministic and pessimistic. Scores above 85 are rare.
-- WEIGHTED FORMULA:
-  Hook ×2.0, Clarity ×2.0, Incongruency ×1.5, Simplicity ×1.5, Emotional Trigger ×1.5, Retention ×1.5, Shareability ×1.5, Personal Touch ×1.0, Takeaway ×0.5.
+- DYNAMIC WEIGHTED FORMULA FOR ${targetPlatform.toUpperCase()}:
+  ${profile.weights}
 
 Return a valid JSON object ONLY:
 {
@@ -193,6 +264,7 @@ Return a valid JSON object ONLY:
 
     // 3. SAVE TO HISTORY
     if (userId && aiResult) {
+      aiResult.platform = targetPlatform; // Store platform inside the JSON result directly
       const { error: saveError } = await supabaseAdmin.from('audit_history').insert({
         user_id: userId,
         content: content,

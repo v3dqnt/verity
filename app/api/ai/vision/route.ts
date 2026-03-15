@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { z } from 'zod';
+import { zodResponseFormat } from 'openai/helpers/zod';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -27,21 +28,23 @@ export async function POST(req: Request) {
     let tempAudioPath: string | null = null;
 
     try {
-        const formData = await req.formData();
-        const file = formData.get('video') as File;
+        const { videoUrl } = await req.json();
 
-        if (!file) {
-            return NextResponse.json({ error: "No video file provided" }, { status: 400 });
+        if (!videoUrl) {
+            return NextResponse.json({ error: "No video URL provided" }, { status: 400 });
         }
 
         if (!openaiKey) {
             return NextResponse.json({ error: "System configuration error: OpenAI Key missing." }, { status: 500 });
         }
 
-        // Save uploaded file to temp directory
-        const bytes = await file.arrayBuffer();
+        // Download the file from Supabase to the temp directory
+        const videoResponse = await fetch(videoUrl);
+        if (!videoResponse.ok) throw new Error("Failed to download video from storage");
+        
+        const bytes = await videoResponse.arrayBuffer();
         const buffer = Buffer.from(bytes);
-        tempVideoPath = path.join(os.tmpdir(), `upload-${Date.now()}-${file.name.replace(/\s/g, '_')}`);
+        tempVideoPath = path.join(os.tmpdir(), `upload-${Date.now()}.mp4`);
         fs.writeFileSync(tempVideoPath, buffer);
 
         console.log(`Processing video: ${tempVideoPath}`);
@@ -145,17 +148,17 @@ Respond in valid JSON matching this schema:
             });
         });
 
-        console.log(`Analyzing video content with GPT-4o...`);
+        console.log(`Analyzing video content with GPT-5.4...`);
 
         const response = await openai.chat.completions.create({
-            model: "gpt-4o",
+            model: "gpt-5.4",
             messages: [
                 {
                     role: "user",
                     content: contentParts
                 }
             ],
-            response_format: { type: "json_object" },
+            response_format: zodResponseFormat(VisionResponseSchema, "vision_analysis"),
             temperature: 0.7,
         });
 

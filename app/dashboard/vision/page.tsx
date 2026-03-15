@@ -31,6 +31,7 @@ const Stars = memo(() => {
 });
 import { motion, AnimatePresence } from "framer-motion";
 import { VideoCameraIcon, ArrowUpTrayIcon, PlayCircleIcon, ExclamationTriangleIcon } from "@heroicons/react/24/outline";
+import { supabase } from "@/lib/supabase";
 
 export default function VisionPage() {
     const [videoFile, setVideoFile] = useState<File | null>(null);
@@ -56,21 +57,40 @@ export default function VisionPage() {
         setAnalysisResult(null);
 
         try {
-            const formData = new FormData();
-            formData.append("video", videoFile);
+            // 1. Upload to Supabase Storage to bypass Vercel's 4.5MB payload limit
+            const fileExt = videoFile.name.split('.').pop() || 'mp4';
+            const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+            const filePath = `uploads/${fileName}`;
 
+            const { data: uploadData, error: uploadError } = await supabase.storage
+                .from('vision-videos')
+                .upload(filePath, videoFile);
+
+            if (uploadError) {
+                console.error("Supabase upload error:", uploadError);
+                throw new Error("Failed to upload video to storage. Make sure your 'vision-videos' bucket exists and is public.");
+            }
+
+            const { data: urlData } = supabase.storage
+                .from('vision-videos')
+                .getPublicUrl(filePath);
+
+            if (!urlData.publicUrl) throw new Error("Could not get public URL for video.");
+
+            // 2. Send the URL to the API
             const response = await fetch("/api/ai/vision", {
                 method: "POST",
-                body: formData,
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ videoUrl: urlData.publicUrl }),
             });
 
-            if (!response.ok) throw new Error("Analysis failed");
+            if (!response.ok) throw new Error("Analysis failed on server.");
 
             const data = await response.json();
             setAnalysisResult(data);
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
-            alert("Failed to analyze video. Please try again.");
+            alert(error.message || "Failed to analyze video. Please try again.");
         } finally {
             setIsAnalyzing(false);
         }

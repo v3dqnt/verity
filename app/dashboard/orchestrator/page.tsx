@@ -7,7 +7,7 @@ import {
   TrendingUp, ChevronDown, Search, X, Clock, FileDown,
   Wand2, Settings2
 } from 'lucide-react';
-import { EditingBox } from '@/components/EditingBox';
+
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
@@ -83,66 +83,6 @@ const PlanetHero = ({ active }: { active: boolean }) => {
   );
 };
 
-const GalaxyHero = ({ active }: { active: boolean }) => {
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0 flex items-center justify-center">
-      <motion.div
-        initial={false}
-        animate={{
-          scale: active ? 1.4 : 0.8,
-          opacity: active ? 0.9 : 0,
-          rotateX: 70,
-          rotateZ: active ? 360 : 0,
-        }}
-        transition={{
-          rotateZ: { duration: 100, repeat: Infinity, ease: "linear" },
-          default: { duration: 2.5, ease: [0.23, 1, 0.32, 1] }
-        }}
-        className="relative w-[1000px] h-[1000px] flex items-center justify-center"
-        style={{ perspective: '2000px', transformStyle: 'preserve-3d' }}
-      >
-        {/* Central Core */}
-        <div
-          className="absolute w-32 h-32 rounded-full bg-white blur-[40px] opacity-100 z-20"
-          style={{ boxShadow: '0 0 100px 40px rgba(16, 255, 180, 0.9)' }}
-        />
-
-        {/* Spiral Arms Architecture */}
-        {[...Array(3)].map((_, i) => (
-          <div key={i} className="absolute inset-0" style={{ transform: `rotate(${i * 120}deg)`, transformStyle: 'preserve-3d' }}>
-            <div
-              className="absolute top-1/2 left-1/2 w-[600px] h-[400px] origin-left"
-              style={{
-                background: 'radial-gradient(ellipse at left, rgba(16, 255, 180, 0.5), rgba(16, 185, 129, 0.25) 40%, transparent 70%)',
-                borderRadius: '100%',
-                filter: 'blur(50px)',
-                transform: 'translateY(-50%) rotate(-30deg) skewX(30deg)'
-              }}
-            />
-            {/* Clumpy Star Matter */}
-            {[...Array(20)].map((_, j) => (
-              <div
-                key={j}
-                className="absolute bg-white rounded-full blur-[1px]"
-                style={{
-                  width: Math.random() * 5 + 3,
-                  height: Math.random() * 5 + 3,
-                  left: `${45 + Math.random() * 50}%`,
-                  top: `${45 + (Math.random() - 0.5) * 30}%`,
-                  opacity: Math.random() * 0.6 + 0.3,
-                  transform: `translateZ(${Math.random() * 60 - 30}px)`
-                }}
-              />
-            ))}
-          </div>
-        ))}
-
-        {/* Ambient Cosmic Dust */}
-        <div className="absolute inset-0 bg-emerald-500/10 blur-[150px] -z-10 rounded-full scale-150" />
-      </motion.div>
-    </div>
-  );
-};
 
 const ShootingStars = () => {
   const [stars, setStars] = useState<any[]>([]);
@@ -186,7 +126,7 @@ export default function OrchestratorPage() {
   const [platform, setPlatform] = useState<'youtube' | 'tiktok' | 'instagram'>('youtube');
   const [scriptType, setScriptType] = useState<'UGC' | 'Advertisement' | 'Content'>('Content');
   const [isHeroMode, setIsHeroMode] = useState(false);
-  const [mode, setMode] = useState<'orchestration' | 'improvement'>('orchestration');
+
   const [pdfGeneratingId, setPdfGeneratingId] = useState<string | null>(null);
 
   const [brands, setBrands] = useState<any[]>([]);
@@ -213,12 +153,12 @@ export default function OrchestratorPage() {
   }, []);
 
   const runOrchestration = async () => {
-    if (!goal.trim() || (mode === 'orchestration' && !selectedBrandId)) return;
+    if (!goal.trim() || !selectedBrandId) return;
     setLoading(true);
     setCampaign(null);
 
     try {
-      if (isHeroMode && mode === 'orchestration') {
+      if (isHeroMode) {
         const platforms = ['youtube', 'instagram', 'tiktok'];
         const results: any[] = [];
 
@@ -231,8 +171,7 @@ export default function OrchestratorPage() {
               brandId: selectedBrandId,
               trendId: selectedTrendId || null,
               platform: p,
-              scriptType,
-              mode
+              scriptType
             }),
           });
           const data = await res.json();
@@ -248,10 +187,9 @@ export default function OrchestratorPage() {
           body: JSON.stringify({
             goal,
             brandId: selectedBrandId,
-            trendId: mode === 'improvement' ? null : (selectedTrendId || null),
+            trendId: selectedTrendId || null,
             platform: platform,
-            scriptType,
-            mode
+            scriptType
           }),
         });
         const data = await res.json();
@@ -494,7 +432,7 @@ export default function OrchestratorPage() {
         <StarsBackground />
         <ShootingStars />
         <PlanetHero active={isHeroMode} />
-        <GalaxyHero active={mode === 'improvement'} />
+
 
         <div className="max-w-[1400px] w-full z-10">
           <header className="mb-20">
@@ -503,8 +441,7 @@ export default function OrchestratorPage() {
             </h1>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-12 relative z-50">
-              {mode === 'orchestration' && (
-                <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-3">
                   <label className="text-[9px] font-mono uppercase text-zinc-500 tracking-[0.4em] ml-6 flex items-center gap-2">
                     <Globe size={10} className="text-emerald-500" /> 01. Brand Identity
                   </label>
@@ -526,9 +463,8 @@ export default function OrchestratorPage() {
                     </div>
                   </div>
                 </div>
-              )}
 
-              {mode === 'orchestration' && scriptType === 'Content' && (
+              {scriptType === 'Content' && (
                 <div className="flex flex-col gap-3" ref={dropdownRef}>
                   <label className="text-[9px] font-mono uppercase text-zinc-500 tracking-[0.4em] ml-6 flex items-center gap-2">
                     <TrendingUp size={10} className="text-purple-500" /> 02. Cultural Signal
@@ -571,26 +507,6 @@ export default function OrchestratorPage() {
 
             <div className="space-y-8 w-full relative z-10">
               <div className="flex flex-wrap gap-15 items-center justify-center">
-                <button
-                  onClick={() => {
-                    setMode(mode === 'orchestration' ? 'improvement' : 'orchestration');
-                    setIsHeroMode(false);
-                    setCampaign(null);
-                  }}
-                  className={`relative px-10 py-4 rounded-full text-[10px] font-black uppercase border transition-all flex items-center gap-3 overflow-hidden group ${mode === 'improvement' ? 'bg-linear-to-r from-emerald-600 to-emerald-400 text-black border-transparent shadow-[0_0_30px_rgba(16,185,129,0.4)]' : 'text-emerald-500 border-emerald-500/20 hover:border-emerald-500/40'
-                    }`}
-                >
-                  <Wand2 size={14} className={mode === 'improvement' ? 'animate-pulse' : ''} />
-                  {mode === 'improvement' ? 'Exit Improvement' : 'Script Improvement'}
-                  {mode === 'improvement' && (
-                    <motion.div className="absolute inset-0 pointer-events-none">
-                      {[...Array(8)].map((_, i) => (
-                        <motion.div key={i} className="absolute bg-white rounded-full" initial={{ scale: 0, x: "50%", y: "50%" }} animate={{ scale: [0, 1.2, 0], x: [`${50}%`, `${50 + (Math.random() * 80 - 40)}%`], y: [`${50}%`, `${50 + (Math.random() * 80 - 40)}%`] }} transition={{ duration: 0.7, repeat: Infinity, repeatDelay: Math.random() * 0.5 }} style={{ width: 2, height: 2 }} />
-                      ))}
-                    </motion.div>
-                  )}
-                </button>
-
                 <div className="flex gap-2 p-1.5 liquid-glass rounded-full relative z-10">
                   {['youtube', 'tiktok', 'instagram'].map((p) => (
                     <button key={p} disabled={isHeroMode} onClick={() => setPlatform(p as any)} className={`px-6 py-3 rounded-full text-[10px] font-black uppercase transition-all ${!isHeroMode && platform === p ? 'bg-white text-black' : 'text-zinc-500 hover:text-white'}`}>{p}</button>
@@ -608,35 +524,34 @@ export default function OrchestratorPage() {
                     </button>
                   ))}
                 </div>
-                {mode === 'orchestration' && (
-                  <button
-                    onClick={() => setIsHeroMode(!isHeroMode)}
-                    className={`relative px-10 py-4 rounded-full text-[10px] font-black uppercase border transition-all flex items-center gap-3 overflow-hidden group ${isHeroMode ? 'bg-linear-to-r from-emerald-600 to-emerald-400 text-black border-transparent shadow-[0_0_30px_rgba(16,185,129,0.4)]' : 'text-emerald-500 border-emerald-500/20 hover:border-emerald-500/40'
-                      }`}
-                  >
-                    <Sparkles size={14} className={isHeroMode ? 'animate-pulse' : ''} />
-                    Hero Mode: Multi-Campaign
-                    {isHeroMode && (
-                      <motion.div className="absolute inset-0 pointer-events-none">
-                        {[...Array(8)].map((_, i) => (
-                          <motion.div key={i} className="absolute bg-white rounded-full" initial={{ scale: 0, x: "50%", y: "50%" }} animate={{ scale: [0, 1.2, 0], x: [`${50}%`, `${50 + (Math.random() * 80 - 40)}%`], y: [`${50}%`, `${50 + (Math.random() * 80 - 40)}%`] }} transition={{ duration: 0.7, repeat: Infinity, repeatDelay: Math.random() * 0.5 }} style={{ width: 2, height: 2 }} />
-                        ))}
-                      </motion.div>
-                    )}
-                  </button>
-                )}
+                
+                <button
+                  onClick={() => setIsHeroMode(!isHeroMode)}
+                  className={`relative px-10 py-4 rounded-full text-[10px] font-black uppercase border transition-all flex items-center gap-3 overflow-hidden group ${isHeroMode ? 'bg-linear-to-r from-emerald-600 to-emerald-400 text-black border-transparent shadow-[0_0_30px_rgba(16,185,129,0.4)]' : 'text-emerald-500 border-emerald-500/20 hover:border-emerald-500/40'
+                    }`}
+                >
+                  <Sparkles size={14} className={isHeroMode ? 'animate-pulse' : ''} />
+                  Hero Mode: Multi-Campaign
+                  {isHeroMode && (
+                    <motion.div className="absolute inset-0 pointer-events-none">
+                      {[...Array(8)].map((_, i) => (
+                        <motion.div key={i} className="absolute bg-white rounded-full" initial={{ scale: 0, x: "50%", y: "50%" }} animate={{ scale: [0, 1.2, 0], x: [`${50}%`, `${50 + (Math.random() * 80 - 40)}%`], y: [`${50}%`, `${50 + (Math.random() * 80 - 40)}%`] }} transition={{ duration: 0.7, repeat: Infinity, repeatDelay: Math.random() * 0.5 }} style={{ width: 2, height: 2 }} />
+                      ))}
+                    </motion.div>
+                  )}
+                </button>
               </div>
 
               <div className="liquid-glass p-2 rounded-full flex flex-col md:flex-row gap-2 w-full shadow-2xl relative">
                 <input
                   className="flex-1 bg-transparent px-8 py-6 outline-none text-2xl font-medium italic placeholder:text-zinc-700 relative z-10"
-                  placeholder={mode === 'improvement' ? "Paste the script you want to optimize..." : "Describe your campaign objective..."}
+                  placeholder="Describe your campaign objective..."
                   value={goal}
                   onChange={(e) => setGoal(e.target.value)}
                 />
-                <button onClick={runOrchestration} disabled={loading || (mode === 'orchestration' && !selectedBrandId) || !goal} className="bg-emerald-500 text-black px-12 py-5 rounded-full font-black uppercase italic flex items-center justify-center gap-3 disabled:opacity-20 transition-all hover:scale-[1.02]">
-                  {loading ? <RefreshCw className="animate-spin" size={20} /> : (mode === 'improvement' ? <Wand2 size={20} /> : <Sparkles size={20} />)}
-                  {mode === 'improvement' ? 'Optimize Script' : (isHeroMode ? 'Deploy Multi-Strategy' : 'Deploy Strategy')}
+                <button onClick={runOrchestration} disabled={loading || !selectedBrandId || !goal} className="bg-emerald-500 text-black px-12 py-5 rounded-full font-black uppercase italic flex items-center justify-center gap-3 disabled:opacity-20 transition-all hover:scale-[1.02]">
+                  {loading ? <RefreshCw className="animate-spin" size={20} /> : <Sparkles size={20} />}
+                  {isHeroMode ? 'Deploy Multi-Strategy' : 'Deploy Strategy'}
                 </button>
               </div>
 
@@ -667,14 +582,7 @@ export default function OrchestratorPage() {
             )}
             {campaign && !campaign.error && (
               <div className={isHeroMode ? "grid grid-cols-1 xl:grid-cols-3 gap-8" : "w-full"}>
-                {mode === 'improvement' ? (
-                  <EditingBox
-                    improvements={campaign.improvements || []}
-                    finalScript={campaign.script || []}
-                  />
-                ) : (
-                  Array.isArray(campaign) ? campaign.map((c, i) => renderCampaignCard(c, i)) : renderCampaignCard(campaign)
-                )}
+                {Array.isArray(campaign) ? campaign.map((c, i) => renderCampaignCard(c, i)) : renderCampaignCard(campaign)}
               </div>
             )}
           </AnimatePresence>
