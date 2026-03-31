@@ -152,12 +152,13 @@ MANDATE: You MUST structure the script to align with the "Trend Usage Strategy" 
 
     const selectedStrategy = strategyPrompts[scriptType] || strategyPrompts.Content;
 
+    const sanitizedGoal = goal.replace(/[`"\\]/g, ' ').slice(0, 4000);
     const writerSystemPrompt = `
 You are the Content Producer AI.
 
 ${brandBlock}
 
-Goal: ${goal}
+Goal: ${sanitizedGoal}
 Current focus: ${isHeroMode ? 'ALL (HERO MODE)' : platform.toUpperCase()}
 Category Context: ${scriptType}
 

@@ -38,6 +38,19 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "System configuration error: OpenAI Key missing." }, { status: 500 });
         }
 
+        // SSRF protection: Validate URL is HTTPS and matches allowed storage domain
+        let parsed;
+        try {
+            parsed = new URL(videoUrl);
+        } catch {
+            return NextResponse.json({ error: "Invalid video URL format" }, { status: 400 });
+        }
+        
+        const allowedHosts = [process.env.NEXT_PUBLIC_SUPABASE_URL?.replace('https://', '')];
+        if (parsed.protocol !== 'https:' || !allowedHosts.some(h => h && parsed.hostname.endsWith(h))) {
+            return NextResponse.json({ error: 'Invalid video URL: Host not allowed' }, { status: 400 });
+        }
+
         // Download the file from Supabase to the temp directory
         const videoResponse = await fetch(videoUrl);
         if (!videoResponse.ok) throw new Error("Failed to download video from storage");

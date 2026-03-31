@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from "openai";
 import { NextResponse } from 'next/server';
+import { PDFParse } from 'pdf-parse';
 
 const MAX_RETRIES = 3;
 const INITIAL_BACKOFF = 1000; // 1 second
@@ -71,17 +72,24 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const { content, userId, platform = 'default', action = 'audit' } = await req.json();
+    const body = await req.json();
+    const content = body.content as string;
+    const userId = body.userId as string;
+    const platform = body.platform || 'default';
+    const action = body.action || 'audit';
 
-    if (!content) return NextResponse.json({ error: "No content provided" }, { status: 400 });
+    if (!content || content.trim() === '') {
+      return NextResponse.json({ error: "No content provided" }, { status: 400 });
+    }
 
     if (action === 'improve') {
+      const sanitizedContent = content.replace(/[`"\\]/g, ' ').slice(0, 4000);
       const improvePrompt = `[MISSION: SCRIPT IMPROVEMENT]
 You are a ruthless viral script editor.
 Goal: Take the provided draft and transform it into a high-retention performance script for ${platform}.
 
 INPUT DRAFT:
-"${content}"
+"${sanitizedContent}"
 
 Process:
 1. Critique: Analyze the existing script against virality criteria (Hook, Pacing, Clarity, Relatability).
@@ -108,6 +116,7 @@ You MUST return a JSON object containing:
 
       const improvedResult = JSON.parse(completion.choices[0].message.content || "{}");
       improvedResult.is_improvement = true;
+      // ... storage logic remains the same
 
       if (userId) {
         const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);

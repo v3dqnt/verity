@@ -4,7 +4,8 @@ import { Search, Loader2, Send, Sparkles, Database, ExternalLink, BookmarkPlus, 
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { supabase } from "@/lib/supabase";
-
+import { useActiveBrand } from '@/hooks/useActiveBrand';
+import CompetitorIntel from '@/components/radar/CompetitorIntel';
 
 // --- BACKGROUND COMPONENT ---
 const Stars = memo(() => {
@@ -51,8 +52,7 @@ export default function SignalRadar() {
   const [copied, setCopied] = useState(false);
   const [copiedPromptId, setCopiedPromptId] = useState<string | null>(null);
 
-  const [brands, setBrands] = useState<any[]>([]);
-  const [selectedBrandId, setSelectedBrandId] = useState<string>('');
+  const { brands, activeBrandId, selectBrand } = useActiveBrand();
   const [showBrandSelector, setShowBrandSelector] = useState(false);
   const [session, setSession] = useState<any>(null);
 
@@ -87,21 +87,11 @@ export default function SignalRadar() {
     }
   }, []);
 
-  const loadBrands = useCallback(async (currentSession: any) => {
-    if (!currentSession) return;
-    const { data, error } = await supabase
-      .from('briefs')
-      .select('*')
-      .eq('user_id', currentSession.user.id);
-    if (!error) setBrands(data || []);
-  }, []);
-
   useEffect(() => {
     if (session) {
       loadVault(session);
-      loadBrands(session);
     }
-  }, [session, loadVault, loadBrands]);
+  }, [session, loadVault]);
 
   const toggleSave = async (e: React.MouseEvent, trend: any) => {
     e.stopPropagation();
@@ -151,7 +141,7 @@ export default function SignalRadar() {
 
       const query = searchTerm.trim() || "latest global tech and cultural breakthroughs";
       // Send userId and brandId to backend
-      const res = await fetch(`/api/ai/trends?q=${encodeURIComponent(query)}&userId=${userId}&brandId=${selectedBrandId}`);
+      const res = await fetch(`/api/ai/trends?q=${encodeURIComponent(query)}&userId=${userId}&brandId=${activeBrandId || ''}`);
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
@@ -167,7 +157,7 @@ export default function SignalRadar() {
     } finally {
       setLoading(false);
     }
-  }, [selectedBrandId, loading]); // Added dependencies
+  }, [activeBrandId, loading]); // Added dependencies
 
 
 
@@ -229,20 +219,20 @@ Please create a script that follows this exact format and structure, optimized f
 
 
   return (
-    <main className="min-h-screen bg-[#020202] text-white pt-32 p-6 md:p-12 relative overflow-x-hidden font-sans selection:bg-emerald-500 selection:text-black">
+    <main className="min-h-screen bg-[#020202] text-white pt-20 md:pt-32 px-4 md:p-12 relative overflow-x-hidden font-sans selection:bg-emerald-500 selection:text-black">
       <Stars />
       <div className="max-w-7xl mx-auto relative z-10">
 
 
 
-        <header className="mt-32 mb-20">
-          <div className="flex flex-col gap-12">
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-10">
-              <div className="space-y-4">
-                <h1 className="text-6xl md:text-8xl font-black italic uppercase tracking-tighter leading-none mb-4">
+        <header className="mt-16 md:mt-32 mb-8 md:mb-20">
+          <div className="flex flex-col gap-6 md:gap-12">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4 md:gap-10">
+              <div className="space-y-3 md:space-y-4">
+                <h1 className="text-5xl md:text-8xl font-black italic uppercase tracking-tighter leading-none mb-2 md:mb-4">
                   Radar
                 </h1>
-                <div className="flex items-center gap-4">
+                <div className="flex flex-wrap items-center gap-3">
                   <p className="text-zinc-500 font-mono text-[10px] uppercase tracking-[0.4em]">Intent-Based Discovery</p>
                   <button
                     onClick={() => setIsVaultOpen(true)}
@@ -253,23 +243,23 @@ Please create a script that follows this exact format and structure, optimized f
                 </div>
               </div>
 
-              {/* Time Estimate Note (Top Right of Row) */}
-              <div className="flex items-center gap-3 bg-white/[0.03] border border-white/10 px-5 py-2.5 rounded-full mb-2">
-                <Clock size={14} className="text-emerald-500" />
+              {/* Time Estimate Note */}
+              <div className="flex items-center gap-3 bg-white/[0.03] border border-white/10 px-5 py-2.5 rounded-full">
+                <Clock size={14} className="text-emerald-500 shrink-0" />
                 <p className="text-[9px] font-bold font-mono uppercase tracking-[0.2em] text-zinc-400">
                   Trend finding can take <span className="text-emerald-500">10-12 mins</span> approximately
                 </p>
               </div>
             </div>
 
-            {/* Strategic Row: Search Bar + Selector */}
+            {/* Strategic Row: Search Bar */}
             <div className="flex flex-col xl:flex-row items-center gap-4">
               {/* Left: Search Bar */}
               <div className="relative flex-1 w-full group/search">
                 <div className="absolute -inset-1 bg-linear-to-r from-emerald-500/20 to-transparent rounded-full blur opacity-25 group-focus-within/search:opacity-100 transition duration-1000" />
-                <div className="relative liquid-glass h-20 p-2.5 rounded-full flex items-center gap-3 w-full shadow-2xl border border-white/10 focus-within:border-emerald-500/40 transition-all backdrop-blur-3xl">
+                <div className="relative liquid-glass h-16 md:h-20 p-2 md:p-2.5 rounded-full flex items-center gap-3 w-full shadow-2xl border border-white/10 focus-within:border-emerald-500/40 transition-all backdrop-blur-3xl">
                   <input
-                    className="flex-1 bg-transparent px-6 h-full outline-none text-lg md:text-xl font-medium italic placeholder:text-zinc-500 text-white min-w-0"
+                    className="flex-1 bg-transparent px-4 md:px-6 h-full outline-none text-base md:text-xl font-medium italic placeholder:text-zinc-500 text-white min-w-0"
                     placeholder="What are we building today?"
                     value={searchInput}
                     onChange={(e) => setSearchInput(e.target.value)}
@@ -282,37 +272,8 @@ Please create a script that follows this exact format and structure, optimized f
                     disabled={loading || !searchInput.trim()}
                     className="bg-emerald-500 text-black h-full aspect-square shrink-0 rounded-full font-black flex items-center justify-center disabled:opacity-20 transition-all hover:scale-[1.05] active:scale-95 shadow-[0_0_20px_rgba(16,185,129,0.3)]"
                   >
-                    {loading ? <Loader2 className="animate-spin text-black" size={24} /> : <Search size={24} />}
+                    {loading ? <Loader2 className="animate-spin text-black" size={22} /> : <Search size={22} />}
                   </button>
-                </div>
-              </div>
-
-              {/* Right: Separate Brand Selector Area */}
-              <div className="liquid-glass h-20 p-2.5 px-5 rounded-full border border-white/10 bg-black/20 backdrop-blur-3xl overflow-hidden shrink-0 flex items-center">
-                <div className="flex gap-2.5 items-center h-full overflow-x-auto scrollbar-hide max-w-[300px] md:max-w-[600px]">
-                  <button
-                    onClick={() => setSelectedBrandId('')}
-                    className={`shrink-0 h-full flex items-center gap-3 px-6 rounded-full text-[10px] font-black uppercase transition-all tracking-widest border transition-all ${!selectedBrandId ? 'bg-white text-black border-white' : 'bg-white/5 text-zinc-500 border-white/5 hover:border-white/20 hover:text-white'}`}
-                  >
-                    <div className="h-6 w-6 rounded-full flex items-center justify-center bg-zinc-800 border border-white/10 shrink-0">
-                      <Globe size={12} className={!selectedBrandId ? 'text-black' : 'text-emerald-500'} />
-                    </div>
-                    <span className="italic tracking-tighter">General</span>
-                  </button>
-                  {brands.map((brand) => (
-                    <button
-                      key={brand.id}
-                      onClick={() => setSelectedBrandId(brand.id)}
-                      className={`shrink-0 h-full flex items-center gap-3 px-6 rounded-full border transition-all ${selectedBrandId === brand.id ? 'bg-emerald-500 text-black border-emerald-400' : 'bg-white/5 text-zinc-400 border-white/5 hover:border-white/20 hover:text-white'}`}
-                    >
-                      {brand.logo_url && (
-                        <div className="h-6 w-6 rounded-full overflow-hidden bg-zinc-800 border border-white/10 shrink-0">
-                          <img src={brand.logo_url} className="w-full h-full object-cover" alt="" />
-                        </div>
-                      )}
-                      <span className="text-[10px] font-black uppercase italic tracking-tighter whitespace-nowrap">{brand.company_name}</span>
-                    </button>
-                  ))}
                 </div>
               </div>
             </div>
@@ -323,157 +284,79 @@ Please create a script that follows this exact format and structure, optimized f
 
 
 
-        <div className="space-y-12">
-          {trends.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="liquid-glass border border-white/10 rounded-[3rem] overflow-hidden shadow-2xl bg-black/40"
-            >
-              {/* MATRIX HEADER */}
-              <div className="bg-white/[0.03] border-b border-white/5 p-10 flex justify-between items-center">
-                <div className="flex items-center gap-4">
+        <div className="flex flex-col gap-8 pb-32">
+          {/* Top Row: Trend Radar Bento (Horizontally Long) */}
+          <div className="h-[450px] backdrop-blur-3xl bg-black/10 border border-white/10 rounded-[2rem] overflow-hidden flex flex-col relative group transition-all duration-500 hover:border-emerald-500/30 hover:shadow-[0_0_30px_rgba(16,185,129,0.1)]">
+              <div className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/[0.08] to-transparent pointer-events-none" />
+              <div className="bg-white/[0.03] border-b border-white/5 p-6 flex justify-between items-center shrink-0 relative z-10">
+                <div className="flex items-center gap-3">
                   <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <h2 className="text-xl font-black italic uppercase tracking-tighter text-white">Systematic Intelligence Matrix</h2>
-                </div>
-                <div className="flex items-center gap-6">
-                  <div className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                    <span className="text-[8px] font-mono text-zinc-500 uppercase tracking-widest">YouTube</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
-                    <span className="text-[8px] font-mono text-zinc-500 uppercase tracking-widest">Instagram</span>
-                  </div>
+                  <h2 className="text-sm font-black italic uppercase tracking-tighter text-white">Live Signals</h2>
                 </div>
               </div>
-
-              {/* STRATEGIC OVERVIEW SECTION */}
-              {modelThinking && (
-                <div className="p-10 border-b border-white/5 bg-emerald-500/[0.02]">
-                  <div className="flex items-center gap-3 mb-4">
-                    <Sparkles size={16} className="text-emerald-500" />
-                    <span className="text-[9px] font-mono uppercase tracking-[0.4em] text-emerald-500">Master Strategic Inquest</span>
+              
+              <div className="flex-1 overflow-x-auto overflow-y-hidden custom-scrollbar relative z-10">
+                {loading ? (
+                  <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
+                    <Loader2 className="animate-spin text-emerald-500" size={32} />
+                    <p className="text-[9px] font-mono text-zinc-500 uppercase tracking-[0.4em] animate-pulse">Synchronizing Signals...</p>
                   </div>
-                  <p className="text-sm text-zinc-300 italic leading-relaxed max-w-5xl">
-                    {modelThinking}
-                  </p>
-                </div>
-              )}
-
-              {/* TREND LIST SECTION */}
-              <div className="divide-y divide-white/5">
-                {trends.map((trend, idx) => (
-                  <motion.div
-                    key={trend.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: idx * 0.1 }}
-                    className="group"
-                  >
-                    <div className="p-10 flex flex-col xl:flex-row gap-12 hover:bg-white/[0.01] transition-all">
-                      {/* Left Ident: Name & Score */}
-                      <div className="xl:w-1/4 space-y-6">
-                        <div className="flex items-center gap-3">
-                          <span className={`text-[10px] font-black px-4 py-1.5 rounded-full uppercase border ${trend.category?.toLowerCase() === 'youtube'
-                            ? 'bg-red-500/10 border-red-500/20 text-red-500'
-                            : 'bg-purple-500/10 border-purple-500/20 text-purple-400'
-                            }`}>
-                            {trend.category || "Social"}
-                          </span>
-                          <span className="text-white/20 font-mono text-xs">0{idx + 1}</span>
-                        </div>
-                        <h3 className="text-3xl font-black italic uppercase tracking-tighter text-white group-hover:text-emerald-400 transition-colors">
-                          {trend.name}
-                        </h3>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="bg-black/40 border border-white/5 p-4 rounded-2xl">
-                            <p className="text-[8px] text-zinc-500 uppercase font-mono tracking-widest mb-1">Velocity</p>
-                            <p className="text-lg font-black italic text-emerald-500">{trend.status}</p>
-                          </div>
-                          <div className="bg-black/40 border border-white/5 p-4 rounded-2xl">
-                            <p className="text-[8px] text-zinc-500 uppercase font-mono tracking-widest mb-1">Virality</p>
-                            <p className="text-lg font-black italic text-white">{trend.score}%</p>
-                          </div>
-                        </div>
-                        <button
-                          onClick={(e) => toggleSave(e, trend)}
-                          className="w-full flex items-center justify-center gap-2 py-4 rounded-xl border border-white/10 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all transition-all"
-                        >
-                          {savedIds.has(trend.name) ? <CheckCircle size={16} className="text-emerald-500" /> : <BookmarkPlus size={16} className="text-zinc-500" />}
-                          <span className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest">{savedIds.has(trend.name) ? 'Archived in Vault' : 'Archive Signal'}</span>
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); generateOrchestratorPrompt(trend); }}
-                          className="w-full flex items-center justify-center gap-2 py-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-500 hover:bg-emerald-500/10 transition-all group"
-                        >
-                          {copiedPromptId === trend.name ? (
-                            <>
-                              <CheckCircle size={16} className="text-emerald-500" />
-                              <span className="text-[9px] font-mono text-emerald-500 uppercase tracking-widest">Copied to Clipboard!</span>
-                            </>
-                          ) : (
-                            <>
-                              <FileText size={16} className="text-emerald-500 group-hover:scale-110 transition-transform" />
-                              <span className="text-[9px] font-mono text-emerald-500 uppercase tracking-widest">Generate Script Prompt</span>
-                            </>
-                          )}
-                        </button>
+                ) : trends.length > 0 ? (
+                  <div className="flex h-full">
+                    {trends.map((trend, idx) => (
+                      <div key={trend.id} className="p-6 hover:bg-white/[0.02] transition-colors cursor-pointer w-[350px] shrink-0 border-r border-white/5 h-full overflow-y-auto custom-scrollbar" onClick={() => setSelectedTopic(trend)}>
+                         <div className="flex justify-between items-start mb-4">
+                           <div className="flex items-center gap-2">
+                             <span className="text-white/20 font-mono text-[10px]">0{idx + 1}</span>
+                             <span className={`text-[8px] font-black px-3 py-1 rounded-full uppercase border ${trend.category?.toLowerCase() === 'youtube'
+                               ? 'bg-red-500/10 border-red-500/20 text-red-500'
+                               : 'bg-purple-500/10 border-purple-500/20 text-purple-400'
+                               }`}>
+                               {trend.category || "Social"}
+                             </span>
+                           </div>
+                           <button onClick={(e) => toggleSave(e, trend)} className="text-zinc-500 hover:text-emerald-500 transition-colors p-1">
+                             {savedIds.has(trend.name) ? <CheckCircle size={14} className="text-emerald-500" /> : <BookmarkPlus size={14} />}
+                           </button>
+                         </div>
+                         <h3 className="text-lg font-black italic uppercase tracking-tighter text-white mb-3 hover:text-emerald-400 transition-colors">{trend.name}</h3>
+                         <div className="flex gap-3 mb-4">
+                           <div className="bg-black/40 border border-white/5 px-3 py-2 rounded-xl flex-1">
+                             <p className="text-[8px] text-zinc-500 uppercase font-mono tracking-widest mb-1">Velocity</p>
+                             <p className="text-sm font-black italic text-emerald-500">{trend.status}</p>
+                           </div>
+                           <div className="bg-black/40 border border-white/5 px-3 py-2 rounded-xl flex-1">
+                             <p className="text-[8px] text-zinc-500 uppercase font-mono tracking-widest mb-1">Virality</p>
+                             <p className="text-sm font-black italic text-white">{trend.score}%</p>
+                           </div>
+                         </div>
+                         <p className="text-xs text-zinc-400 italic line-clamp-4 mb-4">{trend.desc}</p>
+                         <button
+                           onClick={(e) => { e.stopPropagation(); generateOrchestratorPrompt(trend); }}
+                           className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-500 hover:bg-emerald-500/10 transition-all text-[9px] font-mono text-emerald-500 uppercase tracking-widest group"
+                         >
+                           {copiedPromptId === trend.name ? (
+                             <><CheckCircle size={14} /> Copied Prompt</>
+                           ) : (
+                             <><FileText size={14} className="group-hover:scale-110 transition-transform" /> Get Script Prompt</>
+                           )}
+                         </button>
                       </div>
-
-                      {/* Middle: Description & Strategy */}
-                      <div className="xl:flex-1 space-y-8">
-                        <div>
-                          <p className="text-[9px] font-mono uppercase text-zinc-600 tracking-[0.4em] mb-4">Master Breakdown</p>
-                          <p className="text-zinc-300 text-sm leading-relaxed italic border-l-2 border-emerald-500/20 pl-6">
-                            {trend.desc}
-                          </p>
-                        </div>
-
-                        <div className="bg-white/[0.03] border border-emerald-500/10 p-6 rounded-3xl">
-                          <p className="text-[8px] font-mono text-emerald-500 uppercase tracking-widest mb-3">Format Breakdown</p>
-                          <p className="text-xs text-zinc-300 leading-relaxed">
-                            {trend.ugc_strategy?.format_explanation || "Analyzing format structure..."}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Right: Sources & Interaction */}
-                      <div className="xl:w-1/4 flex flex-col gap-6">
-                        <div>
-                          <p className="text-[9px] font-mono uppercase text-zinc-600 tracking-[0.4em] mb-4">Signal Verification</p>
-                          <div className="space-y-2">
-                            {trend.example_urls?.slice(0, 2).map((url: string, i: number) => (
-                              <a key={i} href={url} target="_blank" rel="noreferrer" className="flex items-center justify-between bg-white/5 border border-white/10 hover:border-emerald-500 p-4 rounded-2xl group/link transition-all">
-                                <div className="flex items-center gap-3">
-                                  <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                                  <span className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest">Example {i + 1}</span>
-                                </div>
-                                <ExternalLink size={14} className="text-zinc-600 group-hover/link:text-emerald-500" />
-                              </a>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full gap-4 text-center opacity-50 p-6">
+                    <Search size={32} className="text-zinc-600" />
+                    <p className="text-[9px] font-mono text-zinc-500 uppercase tracking-[0.2em] max-w-[200px]">Awaiting input to uncover viral formats.</p>
+                  </div>
+                )}
               </div>
-            </motion.div>
-          )}
+          </div>
 
-          {loading && (
-            <div className="py-40 flex flex-col items-center gap-6">
-              <div className="relative">
-                <div className="absolute inset-0 blur-2xl bg-emerald-500/40 animate-pulse rounded-full" />
-                <Loader2 className="text-emerald-500 animate-spin relative" size={48} />
-              </div>
-              <div className="flex flex-col items-center gap-3">
-                <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-[0.6em] animate-pulse">Synchronizing Live Intelligence...</p>
-                <p className="text-[8px] font-mono text-zinc-600 uppercase tracking-[0.4em]">Optimizing trend velocity for your brand...</p>
-              </div>
-            </div>
-          )}
+          {/* Middle Row: Niche Intel (Expanded) */}
+          <div className="w-full">
+            <CompetitorIntel onIdeaGenerated={(trend) => setTrends(prev => [trend, ...prev])} />
+          </div>
         </div>
       </div >
 

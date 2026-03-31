@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import OpenAI from "openai";
 
 const openaiKey = process.env.OPENAI_API_KEY || '';
+const tavilyKey = process.env.TAVILY_API_KEY || '';
 
 export async function POST(req: Request) {
     try {
@@ -55,7 +56,7 @@ Required Extraction Fields (Return ONLY JSON):
   "humor_style": "Brief descriptor",
   "on_screen_presence": "Brief descriptor"
   ` : `
-  "competitors": ["Comp 1", "Comp 2"]
+  "competitors": ["Exact Brand Name 1", "Exact Brand Name 2"]
   `}
 }
 `;
@@ -78,7 +79,62 @@ Required Extraction Fields (Return ONLY JSON):
         }
 
         const data = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(dataContent);
-        return NextResponse.json(data);
+
+        // --- TAVILY: Resolve competitor social handles in parallel ---
+        let competitorSocialHandles: any[] = [];
+        const competitors: string[] = data.competitors || [];
+
+        if (tavilyKey && competitors.length > 0) {
+            const platformQueries = [
+                { platform: 'instagram', domains: ['instagram.com'], pattern: /instagram\.com\/([a-zA-Z0-9_\.]+)\/?/, excluded: ['p', 'reel', 'reels', 'explore', 'stories', 'tv', 'accounts', 'about'] },
+                { platform: 'twitter', domains: ['twitter.com', 'x.com'], pattern: /(?:twitter|x)\.com\/([a-zA-Z0-9_]+)\/?/, excluded: ['home', 'search', 'explore', 'notifications', 'messages', 'i', 'settings'] },
+                { platform: 'youtube', domains: ['youtube.com'], pattern: /youtube\.com\/(?:@|channel\/|c\/)([a-zA-Z0-9_\-]+)\/?/, excluded: [] },
+            ];
+
+            competitorSocialHandles = await Promise.all(
+                competitors.slice(0, 4).map(async (competitorName) => {
+                    const handles: Record<string, string | null> = { instagram: null, twitter: null, youtube: null };
+
+                    await Promise.all(
+                        platformQueries.map(async ({ platform, domains, pattern, excluded }) => {
+                            try {
+                                const tavilyRes = await fetch('https://api.tavily.com/search', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        api_key: tavilyKey,
+                                        query: `${competitorName} official ${platform} account`,
+                                        search_depth: 'basic',
+                                        max_results: 3,
+                                        include_domains: domains,
+                                    }),
+                                });
+                                if (!tavilyRes.ok) return;
+                                const tavilyData = await tavilyRes.json();
+
+                                for (const result of (tavilyData?.results || [])) {
+                                    const match = (result.url || '').match(pattern);
+                                    if (match && match[1] && !excluded.includes(match[1])) {
+                                        handles[platform] = match[1];
+                                        break;
+                                    }
+                                }
+                            } catch (err) {
+                                console.warn(`[brand-analyze] Tavily failed for ${competitorName}/${platform}:`, err);
+                            }
+                        })
+                    );
+
+                    console.log(`[brand-analyze] ${competitorName}:`, handles);
+                    return { name: competitorName, ...handles };
+                })
+            );
+        }
+
+        return NextResponse.json({
+            ...data,
+            competitor_social_handles: competitorSocialHandles,
+        });
 
     } catch (error: any) {
         console.error("AI Analysis Error:", error);

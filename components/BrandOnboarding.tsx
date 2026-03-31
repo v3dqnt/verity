@@ -59,6 +59,61 @@ const itemSlide = {
     }
 };
 
+interface FormData {
+    entity_type: 'brand' | 'creator';
+    company_name: string;
+    industry: string;
+    mission_brief: string;
+    target_age_groups: string[];
+    competitors: string[];
+    social_links: {
+        website: string;
+        instagram: string;
+        tiktok: string;
+        twitter: string;
+    };
+    visual_aesthetic: string;
+    content_samples: string[];
+    tone_voice: string;
+    tone_extra_instructions: string;
+    title: string;
+    logo_url: string;
+    product_analysis: any[];
+    tagline: string;
+    vision: string;
+    values: string[];
+    personality: string[];
+    archetype: string;
+    positioning: string;
+    voice_traits: string[];
+    do_say: string[];
+    dont_say: string[];
+    humor_style: string;
+    slang_level: number;
+    emoji_usage: number;
+    legal_constraints: string[];
+    sensitive_topics: string[];
+    banned_topics: string[];
+    brand_summary: string;
+    creator_stage: string;
+    goals: string[];
+    catchphrases: string[];
+    persona_name: string;
+    pain_points: string[];
+    awareness_level: string;
+    language_style: string;
+    objections: string[];
+    content_they_skip: string[];
+    content_pillars: any[];
+    offers: any[];
+    on_screen_presence: string;
+    visual_refs: string[];
+    no_go_visuals: string[];
+    preferred_brand_types: string[];
+    personal_boundaries: string[];
+    competitor_social_handles: any[];
+}
+
 export default function BrandOnboarding({ onClose, onComplete, initialData }: BrandOnboardingProps) {
     const [currentStep, setCurrentStep] = useState(1);
     const [loading, setLoading] = useState(false);
@@ -67,13 +122,13 @@ export default function BrandOnboarding({ onClose, onComplete, initialData }: Br
     const [analyzingProduct, setAnalyzingProduct] = useState(false);
     const [pendingCompetitor, setPendingCompetitor] = useState('');
 
-    const [formData, setFormData] = useState({
-        entity_type: 'brand' as 'brand' | 'creator',
+    const [formData, setFormData] = useState<FormData>({
+        entity_type: 'brand',
         company_name: '',
         industry: '',
         mission_brief: '',
-        target_age_groups: [] as string[],
-        competitors: [] as string[],
+        target_age_groups: [],
+        competitors: [],
         social_links: {
             website: '',
             instagram: '',
@@ -81,50 +136,45 @@ export default function BrandOnboarding({ onClose, onComplete, initialData }: Br
             twitter: ''
         },
         visual_aesthetic: '',
-        content_samples: [] as string[],
+        content_samples: [],
         tone_voice: '',
         tone_extra_instructions: '',
-        title: '', // Strategy Label
+        title: '',
         logo_url: '',
-        product_analysis: [] as any[],
-
-        // ADVANCED FIELDS
+        product_analysis: [],
         tagline: '',
         vision: '',
-        values: [] as string[],
-        personality: [] as string[],
+        values: [],
+        personality: [],
         archetype: '',
         positioning: '',
-
-        voice_traits: [] as string[],
-        do_say: [] as string[],
-        dont_say: [] as string[],
+        voice_traits: [],
+        do_say: [],
+        dont_say: [],
         humor_style: '',
         slang_level: 3,
         emoji_usage: 2,
-
-        legal_constraints: [] as string[],
-        sensitive_topics: [] as string[],
-        banned_topics: [] as string[],
+        legal_constraints: [],
+        sensitive_topics: [],
+        banned_topics: [],
         brand_summary: '',
-
-        // CREATOR SPECIFIC (Expansion)
-        creator_stage: '', // Beginner, Growth, Established
-        goals: [] as string[],
-        catchphrases: [] as string[],
+        creator_stage: '',
+        goals: [],
+        catchphrases: [],
         persona_name: '',
-        pain_points: [] as string[],
+        pain_points: [],
         awareness_level: '',
         language_style: '',
-        objections: [] as string[],
-        content_they_skip: [] as string[],
-        content_pillars: [] as any[], // {name, objective, examples}
-        offers: [] as any[], // {name, type, value_prop, price_tier}
+        objections: [],
+        content_they_skip: [],
+        content_pillars: [],
+        offers: [],
         on_screen_presence: '',
-        visual_refs: [] as string[],
-        no_go_visuals: [] as string[],
-        preferred_brand_types: [] as string[],
-        personal_boundaries: [] as string[]
+        visual_refs: [],
+        no_go_visuals: [],
+        preferred_brand_types: [],
+        personal_boundaries: [],
+        competitor_social_handles: []
     });
 
     const [isFinalizing, setIsFinalizing] = useState(false);
@@ -139,7 +189,8 @@ export default function BrandOnboarding({ onClose, onComplete, initialData }: Br
             setFormData(prev => ({
                 ...prev,
                 ...initialData,
-                social_links: { ...prev.social_links, ...(initialData.social_links || {}) }
+                social_links: { ...prev.social_links, ...(initialData.social_links || {}) },
+                competitor_social_handles: initialData.competitor_social_handles || prev.competitor_social_handles
             }));
             // Skip entity_type selection (step 1) when editing — it's already set
             setCurrentStep(2);
@@ -218,6 +269,7 @@ export default function BrandOnboarding({ onClose, onComplete, initialData }: Br
                     tone_voice: data.tone_voice || prev.tone_voice,
                     visual_aesthetic: data.visual_aesthetic || prev.visual_aesthetic,
                     competitors: data.competitors ? [...new Set([...prev.competitors, ...data.competitors])] : prev.competitors,
+                    competitor_social_handles: data.competitor_social_handles || prev.competitor_social_handles,
                     // Creator Mapping
                     creator_stage: data.creator_stage || prev.creator_stage,
                     goals: data.goals || prev.goals,

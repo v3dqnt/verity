@@ -99,6 +99,83 @@ export async function GET(req: Request) {
 
     if (cached) return NextResponse.json(cached.result);
 
+    // --- COMPETITOR INTEL (with per-competitor caching) ---
+    let competitorIntel = "";
+    const competitors: string[] = (Array.isArray(brandContext?.competitors)
+      ? (brandContext.competitors as string[])
+      : []
+    ).slice(0, 3);
+
+    if (competitors.length > 0) {
+      const competitorIntelSummaries = await Promise.all(
+        competitors.map(async (competitor) => {
+          const competitorCacheKey = `competitor_intel_${competitor
+            .toLowerCase()
+            .replace(/\s+/g, "_")
+            .replace(/[^a-z0-9_]/g, "")}`;
+
+          // Check cache first (6 hour TTL)
+          const { data: cachedIntel } = await supabaseAdmin
+            .from("radar_cache")
+            .select("result, created_at")
+            .eq("cache_key", competitorCacheKey)
+            .gte(
+              "created_at",
+              new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString()
+            )
+            .maybeSingle();
+
+          if (cachedIntel) {
+            console.log(`Competitor cache hit: ${competitor}`);
+            return `Competitor: ${competitor}\n${cachedIntel.result.summary}`;
+          }
+
+          // Cache miss — run standard completions
+          console.log(`Competitor cache miss, fetching: ${competitor}`);
+          const res = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [
+              {
+                role: "system",
+                content:
+                  "You are a social media competitive analyst. Predict a concise 3-5 sentence summary of what this brand/creator is likely posting on Instagram and YouTube right now based on their name and industry context. Focus on video formats, hooks, topics, and posting frequency.",
+              },
+              {
+                role: "user",
+                content: `What video formats, topics, and hooks are they using right now? Competitor name: "${competitor}"`,
+              },
+            ],
+          });
+
+          const summary = res.choices[0]?.message?.content?.trim() || "No data found.";
+
+          // Save to cache asynchronously
+          supabaseAdmin
+            .from("radar_cache")
+            .upsert({
+              cache_key: competitorCacheKey,
+              result: { summary },
+            })
+            .then(
+              () => console.log(`Competitor intel cached: ${competitor}`),
+              (e: any) => console.error(`Competitor cache save failed: ${e}`)
+            );
+
+          return `Competitor: ${competitor}\n${summary}`;
+        })
+      );
+
+      competitorIntel = `
+COMPETITOR CONTENT INTEL (Live Research):
+${competitorIntelSummaries.join("\n\n")}
+
+Use this to:
+- Identify formats competitors are over-indexing on (so the brand can differentiate)
+- Spot gaps in competitor content the brand can own
+- Avoid recommending trends the competitors are already saturating
+`;
+    }
+
     const brandPromptPart = brandContext ? `
       BRAND IDENTITY DEEP DIVE:
       - Overview Summary: ${brandContext.brand_summary || 'N/A'}
@@ -116,6 +193,7 @@ export async function GET(req: Request) {
       - Values: ${JSON.stringify(brandContext.values || [])}
       - Positioning Statement: ${brandContext.positioning || 'N/A'}
       - Competitors/Inspirations: ${JSON.stringify(brandContext.competitors || [])}
+      ${competitorIntel}
 
       AUDIENCE:
       - Target Age Groups: ${JSON.stringify(brandContext.target_age_groups || [])}

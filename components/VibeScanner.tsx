@@ -1,21 +1,19 @@
 "use client";
-import { useState, useEffect } from 'react';
-import { Zap, ShieldAlert, Sparkles, Loader2, Globe, BarChart3, Info, History, X, BrainCircuit, Clock } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Zap, ShieldAlert, Sparkles, Loader2, Globe, BarChart3, Info, History, X, BrainCircuit, Clock, FileUp } from 'lucide-react';
 import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   ResponsiveContainer
 } from 'recharts';
 import { supabase } from '@/lib/supabase';
 
-export function VibeScanner() {
+export function VibeScanner({ externalLoadItem }: { externalLoadItem?: any }) {
   const [input, setInput] = useState('');
   const [platform, setPlatform] = useState('default');
   const [loading, setLoading] = useState(false);
   const [improving, setImproving] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [improvedScript, setImprovedScript] = useState<any>(null);
-  const [history, setHistory] = useState<any[]>([]);
-  const [showHistory, setShowHistory] = useState(false);
   const [showThinking, setShowThinking] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [activeCriteria, setActiveCriteria] = useState<string | null>(null);
@@ -25,20 +23,15 @@ export function VibeScanner() {
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) {
         setUserId(data.user.id);
-        fetchHistory(data.user.id);
       }
     });
   }, []);
 
-  const fetchHistory = async (uid: string) => {
-    try {
-      const res = await fetch(`/api/ai/trust-score?userId=${uid}`);
-      const data = await res.json();
-      if (data.history) setHistory(data.history);
-    } catch (e) {
-      console.error("Failed to fetch history");
+  useEffect(() => {
+    if (externalLoadItem) {
+      loadFromHistory(externalLoadItem);
     }
-  };
+  }, [externalLoadItem]);
 
   const handleScan = async () => {
     if (!input) return;
@@ -51,7 +44,9 @@ export function VibeScanner() {
       });
       const data = await res.json();
       setResult(data);
-      if (userId) fetchHistory(userId); // Refresh history
+      window.dispatchEvent(new CustomEvent('scan-complete'));
+      // Parent should handle history refresh via callback if needed, 
+      // but here we just rely on the database having the new entry.
     } catch (err) {
       alert("Analysis failed. System busy.");
     } finally {
@@ -70,7 +65,7 @@ export function VibeScanner() {
       });
       const data = await res.json();
       setImprovedScript(data);
-      if (userId) fetchHistory(userId); // Refresh history to show new improvement
+      window.dispatchEvent(new CustomEvent('scan-complete'));
     } catch (err) {
       alert("Improvement failed. System busy.");
     } finally {
@@ -124,48 +119,20 @@ export function VibeScanner() {
   const loadFromHistory = (item: any) => {
     if (item.result.is_improvement) {
       setImprovedScript(item.result);
-      setResult(null); // Clear audit result so only the improvement shows
+      setResult(null);
     } else {
       setResult(item.result);
       setImprovedScript(null);
     }
     setInput(item.content);
-    setShowHistory(false);
     setActiveCriteria(null);
     setCriterionLoading(null);
   };
 
+
   return (
     <div className="space-y-10 relative">
 
-      {/* HISTORY MODAL */}
-      {showHistory && (
-        <div className="fixed inset-0 z-50 flex items-center justify-end bg-black/50 backdrop-blur-sm" onClick={() => setShowHistory(false)}>
-          <div className="w-full max-w-md h-full bg-zinc-900 border-l border-white/10 p-8 overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-8">
-              <h2 className="text-2xl font-black italic uppercase">Audit History</h2>
-              <button onClick={() => setShowHistory(false)} className="hover:text-emerald-500"><X /></button>
-            </div>
-            <div className="space-y-4">
-              {history.map((item: any) => (
-                <div key={item.id} onClick={() => loadFromHistory(item)} className="p-4 bg-zinc-800/50 rounded-xl border border-white/5 hover:border-emerald-500/50 cursor-pointer transition-all group">
-                  <div className="flex justify-between items-start mb-2">
-                    <span className={`text-xl font-black ${item.score >= 80 ? 'text-emerald-500' : item.score >= 50 ? 'text-yellow-500' : 'text-zinc-500'}`}>
-                      {item.score}/100
-                    </span>
-                    <span className="text-[10px] text-zinc-500 font-mono">
-                      {new Date(item.created_at).toLocaleDateString()}
-                      {item.result?.is_improvement && ' - IMPROVED'}
-                    </span>
-                  </div>
-                  <p className="text-xs text-zinc-400 line-clamp-2 font-mono">{item.content}</p>
-                </div>
-              ))}
-              {history.length === 0 && <p className="text-zinc-500 italic">No past audits found.</p>}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* THINKING MODAL */}
       {showThinking && result?.thinking && (
@@ -185,19 +152,22 @@ export function VibeScanner() {
 
       {/* 1. INPUT BOX */}
       <div className="bg-zinc-900/50 border border-white/10 rounded-[2rem] p-8 shadow-2xl backdrop-blur-md">
-        <div className="flex flex-wrap gap-3 mb-6">
-          {['default', 'tiktok', 'reels', 'shorts'].map(p => (
-            <button
-              key={p}
-              onClick={() => setPlatform(p)}
-              className={`px-5 py-2 rounded-full text-xs font-mono uppercase tracking-widest transition-all
-                ${platform === p 
-                  ? 'bg-emerald-500 text-black shadow-[0_0_15px_rgba(16,185,129,0.4)]' 
-                  : 'bg-zinc-800/50 text-zinc-400 hover:bg-zinc-800 hover:text-white border border-white/5'}`}
-            >
-              {p === 'default' ? 'General' : p}
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+          <div className="flex flex-wrap gap-3">
+            {['default', 'tiktok', 'reels', 'shorts'].map(p => (
+              <button
+                key={p}
+                onClick={() => setPlatform(p)}
+                className={`px-5 py-2 rounded-full text-xs font-mono uppercase tracking-widest transition-all
+                  ${platform === p 
+                    ? 'bg-emerald-500 text-black shadow-[0_0_15px_rgba(16,185,129,0.4)]' 
+                    : 'bg-zinc-800/50 text-zinc-400 hover:bg-zinc-800 hover:text-white border border-white/5'}`}
+              >
+                {p === 'default' ? 'General' : p}
+              </button>
+            ))}
+          </div>
+
         </div>
         <textarea
           value={input}
@@ -206,15 +176,6 @@ export function VibeScanner() {
           className="w-full h-48 bg-transparent text-white text-xl placeholder-zinc-700 outline-none resize-none leading-relaxed"
         />
         <div className="flex justify-between mt-4">
-          {/* HISTORY TOGGLE */}
-          {userId && (
-            <button
-              onClick={() => setShowHistory(true)}
-              className="text-zinc-500 hover:text-white flex items-center gap-2 px-4 py-2 rounded-xl transition-colors text-sm font-mono uppercase tracking-widest"
-            >
-              <History size={16} /> Past Audits ({history.length})
-            </button>
-          )}
 
           <button
             onClick={handleScan}
