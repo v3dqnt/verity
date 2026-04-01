@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import OpenAI from "openai";
 import { z } from "zod";
 import { createClient } from '@supabase/supabase-js';
-
 export const dynamic = 'force-dynamic';
+import { getAuthenticatedUser } from "../../auth";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder';
@@ -50,8 +50,14 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const intent = searchParams.get('q') || "";
-    const userId = searchParams.get('userId');
+    const paramsUserId = searchParams.get('userId');
+    const authUserId = await getAuthenticatedUser(req);
+    const userId = authUserId || paramsUserId;
     const brandId = searchParams.get('brandId');
+
+    if (paramsUserId && paramsUserId !== authUserId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     if (!openaiKey) {
       return NextResponse.json({ posts: [], error: "System configuration error: OpenAI Key missing." }, { status: 500 });
@@ -411,8 +417,13 @@ Return ONLY valid JSON:
 
 export async function POST(req: Request) {
   try {
-    const { trend, userId } = await req.json();
-    if (!userId) return NextResponse.json({ error: "No User ID" }, { status: 401 });
+    const { trend, userId: paramsUserId } = await req.json();
+    const authUserId = await getAuthenticatedUser(req);
+    const userId = authUserId || paramsUserId;
+
+    if (!authUserId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (paramsUserId && paramsUserId !== authUserId) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
     const cleanScore = Math.round(trend.score || 80);
     const { data, error } = await supabaseAdmin.from('signal_vault').upsert({
@@ -432,8 +443,14 @@ export async function POST(req: Request) {
 export async function DELETE(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const userId = searchParams.get('userId');
+    const paramsUserId = searchParams.get('userId');
     const topic = searchParams.get('topic');
+    const authUserId = await getAuthenticatedUser(req);
+    const userId = authUserId || paramsUserId;
+
+    if (!authUserId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (paramsUserId && paramsUserId !== authUserId) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
     if (!userId || !topic) return NextResponse.json({ error: "Missing params" }, { status: 400 });
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
     const { error } = await supabaseAdmin.from('signal_vault').delete().eq('user_id', userId).eq('topic', topic);

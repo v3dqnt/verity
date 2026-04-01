@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import OpenAI from "openai";
 import { NextResponse } from 'next/server';
 import { PDFParse } from 'pdf-parse';
+import { getAuthenticatedUser } from "../../auth";
 
 const MAX_RETRIES = 3;
 const INITIAL_BACKOFF = 1000; // 1 second
@@ -49,10 +50,16 @@ async function fetchWithRetry(fn: () => Promise<any>, retries = MAX_RETRIES, bac
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const userId = searchParams.get('userId');
+    const paramsUserId = searchParams.get('userId');
+    const authUserId = await getAuthenticatedUser(req);
+    const userId = authUserId || paramsUserId; // Enforce auth if provided
 
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID required' }, { status: 400 });
+    if (!authUserId) {
+       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (paramsUserId && paramsUserId !== authUserId) {
+       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
@@ -74,7 +81,18 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const content = body.content as string;
-    const userId = body.userId as string;
+    const paramsUserId = body.userId as string;
+    const authUserId = await getAuthenticatedUser(req);
+    const userId = authUserId || paramsUserId;
+
+    if (!authUserId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    
+    if (paramsUserId && paramsUserId !== authUserId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const platform = body.platform || 'default';
     const action = body.action || 'audit';
 

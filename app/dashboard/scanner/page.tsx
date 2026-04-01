@@ -111,25 +111,27 @@ export default function ScannerPage() {
   const router = useRouter();
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) {
-        fetchHistory(data.user.id);
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) {
+        fetchHistory(data.session.user.id, data.session.access_token);
       }
     });
 
     // Listen for custom scan completion to refresh history
     const handleRefresh = () => {
-       supabase.auth.getUser().then(({ data }) => {
-         if (data.user) fetchHistory(data.user.id);
+       supabase.auth.getSession().then(({ data }) => {
+         if (data.session) fetchHistory(data.session.user.id, data.session.access_token);
        });
     };
     window.addEventListener('scan-complete', handleRefresh);
     return () => window.removeEventListener('scan-complete', handleRefresh);
   }, []);
 
-  const fetchHistory = async (uid: string) => {
+  const fetchHistory = async (uid: string, token: string) => {
     try {
-      const res = await fetch(`/api/ai/trust-score?userId=${uid}`);
+      const res = await fetch(`/api/ai/trust-score?userId=${uid}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       const data = await res.json();
       if (data.history) setHistory(data.history);
     } catch (e) {

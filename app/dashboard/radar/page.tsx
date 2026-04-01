@@ -74,7 +74,9 @@ export default function SignalRadar() {
     if (!currentSession) return;
 
     try {
-      const res = await fetch(`/api/ai/trends?userId=${currentSession.user.id}`);
+      const res = await fetch(`/api/ai/trends?userId=${currentSession.user.id}`, {
+        headers: { 'Authorization': `Bearer ${currentSession.access_token}` }
+      });
       if (!res.ok) return;
 
       const data = await res.json();
@@ -110,7 +112,10 @@ export default function SignalRadar() {
     try {
       const res = await fetch('/api/ai/trends', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
         body: JSON.stringify({ trend, userId: session.user.id })
       });
 
@@ -141,7 +146,11 @@ export default function SignalRadar() {
 
       const query = searchTerm.trim() || "latest global tech and cultural breakthroughs";
       // Send userId and brandId to backend
-      const res = await fetch(`/api/ai/trends?q=${encodeURIComponent(query)}&userId=${userId}&brandId=${activeBrandId || ''}`);
+      const res = await fetch(`/api/ai/trends?q=${encodeURIComponent(query)}&userId=${userId}&brandId=${activeBrandId || ''}`, {
+        headers: {
+          ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {})
+        }
+      });
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));

@@ -2,12 +2,18 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
 import Groq from 'groq-sdk';
+import { getAuthenticatedUser } from '../../auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
   try {
     const { goal, brandId, trendId, platform, scriptType = 'Content', mode = 'orchestration' } = await req.json();
+    
+    // Auth Check
+    const authUserId = await getAuthenticatedUser(req);
+    if (!authUserId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
     const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
     // Initialize AI clients

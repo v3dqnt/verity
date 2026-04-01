@@ -193,9 +193,13 @@ export default function VisionPage() {
             if (!urlData.publicUrl) throw new Error("Could not get public URL for video.");
 
             // 2. Send the URL to the API
+            const { data: { session } } = await supabase.auth.getSession();
             const response = await fetch("/api/ai/vision", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { 
+                    "Content-Type": "application/json",
+                    ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {})
+                },
                 body: JSON.stringify({ videoUrl: urlData.publicUrl }),
             });
 

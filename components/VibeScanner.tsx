@@ -15,14 +15,16 @@ export function VibeScanner({ externalLoadItem }: { externalLoadItem?: any }) {
   const [result, setResult] = useState<any>(null);
   const [improvedScript, setImprovedScript] = useState<any>(null);
   const [showThinking, setShowThinking] = useState(false);
+  const [token, setToken] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [activeCriteria, setActiveCriteria] = useState<string | null>(null);
   const [criterionLoading, setCriterionLoading] = useState<string | null>(null);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) {
-        setUserId(data.user.id);
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) {
+        setUserId(data.session.user.id);
+        setToken(data.session.access_token);
       }
     });
   }, []);
@@ -39,7 +41,10 @@ export function VibeScanner({ externalLoadItem }: { externalLoadItem?: any }) {
     try {
       const res = await fetch('/api/ai/trust-score', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({ content: input, userId, platform }), // Pass userId and platform
       });
       const data = await res.json();
@@ -60,7 +65,10 @@ export function VibeScanner({ externalLoadItem }: { externalLoadItem?: any }) {
     try {
       const res = await fetch('/api/ai/trust-score', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({ action: 'improve', content: input, userId, platform }),
       });
       const data = await res.json();
@@ -91,7 +99,10 @@ export function VibeScanner({ externalLoadItem }: { externalLoadItem?: any }) {
     try {
       const res = await fetch('/api/ai/trust-score/explain', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({
           content: input,
           criterion: label,

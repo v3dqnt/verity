@@ -6,6 +6,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { extractFrames, extractAudio, transcribeAudio, analyzeAudioMetadata } from '@/lib/video-processing';
+import { getAuthenticatedUser } from '../../auth';
 
 export const maxDuration = 120; // Allow enough time for video processing and analysis
 export const dynamic = 'force-dynamic';
@@ -29,6 +30,9 @@ export async function POST(req: Request) {
 
     try {
         const { videoUrl } = await req.json();
+
+        const authUserId = await getAuthenticatedUser(req);
+        if (!authUserId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
         if (!videoUrl) {
             return NextResponse.json({ error: "No video URL provided" }, { status: 400 });

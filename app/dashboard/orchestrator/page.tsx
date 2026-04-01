@@ -177,10 +177,15 @@ export default function OrchestratorPage() {
         const platforms = ['youtube', 'instagram', 'tiktok'];
         const results: any[] = [];
 
+        const { data: { session } } = await supabase.auth.getSession();
+        
         for (const p of platforms) {
           const res = await fetch("/api/ai/orchestrator", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+              "Content-Type": "application/json",
+              ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {})
+            },
             body: JSON.stringify({
               goal,
               brandId: activeBrandId,
@@ -196,9 +201,13 @@ export default function OrchestratorPage() {
           setCampaign([...results]);
         }
       } else {
+        const { data: { session } } = await supabase.auth.getSession();
         const res = await fetch("/api/ai/orchestrator", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {})
+          },
           body: JSON.stringify({
             goal,
             brandId: activeBrandId,
