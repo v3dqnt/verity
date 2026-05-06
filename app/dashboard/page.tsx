@@ -263,6 +263,33 @@ export default function Dashboard() {
               </Link>
             </motion.div>
 
+            {/* NEURAL EDITOR - Wide Bottom */}
+            <motion.div 
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5, duration: 0.7 }}
+              className="md:col-span-6 md:row-span-1 group min-h-[160px] md:min-h-0"
+            >
+              <Link
+                href="/editor"
+                onClick={(e) => navigateWithFade(e, "/editor")}
+                className="block h-full"
+              >
+                <div className="bg-black/10 border border-white/10 backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] rounded-[2.5rem] md:rounded-[3.5rem] p-8 md:p-10 h-full flex flex-row items-center gap-5 md:justify-between hover:bg-emerald-500/[0.06] transition-all duration-700 relative overflow-hidden group-hover:shadow-[0_0_50px_-15px_rgba(16,185,129,0.3)] group-hover:border-emerald-500/40">
+                   <div className="absolute inset-0 rounded-[2.5rem] md:rounded-[3.5rem] bg-gradient-to-b from-white/[0.08] to-transparent pointer-events-none" />
+                   <div className="p-4 md:hidden rounded-2xl border border-white/10 bg-zinc-950 group-hover:border-emerald-500/40 group-hover:scale-110 transition-all duration-500 relative z-10 shadow-2xl shrink-0">
+                      <ArrowPathIcon className="w-8 h-8 text-emerald-500" />
+                   </div>
+                   <div className="flex flex-col gap-1 md:gap-2 relative z-10 flex-1 md:flex-none">
+                    <h3 className="text-2xl md:text-5xl font-black tracking-tighter group-hover:text-emerald-400 transition-all duration-500">Neural Editor</h3>
+                      <p className="text-zinc-500 text-xs md:text-sm max-w-sm font-medium group-hover:text-zinc-300 transition-colors hidden md:block">AI-powered compositing, pacing, and color grading.</p>
+                   </div>
+                   <div className="p-4 md:p-5 hidden md:flex rounded-2xl border border-white/10 bg-zinc-950 group-hover:border-emerald-500/40 group-hover:scale-110 transition-all duration-500 relative z-10 shadow-2xl shrink-0">
+                      <ArrowPathIcon className="w-10 h-10 text-emerald-500" />
+                   </div>
+                </div>
+              </Link>
+            </motion.div>
 
           </div>
         </div>

@@ -120,6 +120,7 @@ PrismaticStars.displayName = "PrismaticStars";
 
 import { motion, AnimatePresence, useMotionValue } from "framer-motion";
 import { VideoCameraIcon, ArrowUpTrayIcon, PlayCircleIcon, ExclamationTriangleIcon } from "@heroicons/react/24/outline";
+import { createClient } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 
 export default function VisionPage() {
@@ -172,38 +173,52 @@ export default function VisionPage() {
         setAnalysisResult(null);
 
         try {
-            // 1. Upload to Supabase Storage to bypass Vercel's 4.5MB payload limit
+            // 1. Get session first — needed for both auth header AND authenticated storage client
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) throw new Error("You must be logged in to analyze a video.");
+
+            // Create an authenticated Supabase client using the user's JWT.
+            // This is required for storage RLS policies that check auth.uid().
+            const authedSupabase = createClient(
+                process.env.NEXT_PUBLIC_SUPABASE_URL!,
+                process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+                { global: { headers: { Authorization: `Bearer ${session.access_token}` } } }
+            );
+
+            // 2. Upload to Supabase Storage to bypass Vercel's 4.5MB payload limit
             const fileExt = videoFile.name.split('.').pop() || 'mp4';
             const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
             const filePath = `uploads/${fileName}`;
 
-            const { data: uploadData, error: uploadError } = await supabase.storage
+            const { error: uploadError } = await authedSupabase.storage
                 .from('vision-videos')
                 .upload(filePath, videoFile);
 
             if (uploadError) {
                 console.error("Supabase upload error:", uploadError);
-                throw new Error("Failed to upload video to storage. Make sure your 'vision-videos' bucket exists and is public.");
+                throw new Error(`Storage upload failed: ${uploadError.message}. Check that 'vision-videos' bucket exists and its RLS policy allows authenticated uploads.`);
             }
 
-            const { data: urlData } = supabase.storage
+            const { data: urlData } = authedSupabase.storage
                 .from('vision-videos')
                 .getPublicUrl(filePath);
 
-            if (!urlData.publicUrl) throw new Error("Could not get public URL for video.");
+            if (!urlData.publicUrl) throw new Error("Could not get public URL for video. Make sure the bucket is set to Public.");
 
-            // 2. Send the URL to the API
-            const { data: { session } } = await supabase.auth.getSession();
+            // 3. Send the URL to the Vision API
             const response = await fetch("/api/ai/vision", {
                 method: "POST",
                 headers: { 
                     "Content-Type": "application/json",
-                    ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {})
+                    "Authorization": `Bearer ${session.access_token}`
                 },
                 body: JSON.stringify({ videoUrl: urlData.publicUrl }),
             });
 
-            if (!response.ok) throw new Error("Analysis failed on server.");
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.error || "Analysis failed on server.");
+            }
 
             const data = await response.json();
             setAnalysisResult(data);

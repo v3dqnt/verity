@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from "openai";
 import { NextResponse } from 'next/server';
-import { PDFParse } from 'pdf-parse';
 import { getAuthenticatedUser } from "../../auth";
+import { createHash } from 'crypto';
 
 const MAX_RETRIES = 3;
 const INITIAL_BACKOFF = 1000; // 1 second
@@ -10,6 +10,7 @@ const INITIAL_BACKOFF = 1000; // 1 second
 // Supabase Init
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder';
+const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
 async function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -49,20 +50,13 @@ async function fetchWithRetry(fn: () => Promise<any>, retries = MAX_RETRIES, bac
 
 export async function GET(req: Request) {
   try {
-    const { searchParams } = new URL(req.url);
-    const paramsUserId = searchParams.get('userId');
     const authUserId = await getAuthenticatedUser(req);
-    const userId = authUserId || paramsUserId; // Enforce auth if provided
+    const userId = authUserId;
 
-    if (!authUserId) {
-       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (paramsUserId && paramsUserId !== authUserId) {
-       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
     const { data, error } = await supabaseAdmin
       .from('audit_history')
       .select('id, created_at, content, score, result')
@@ -81,16 +75,11 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const content = body.content as string;
-    const paramsUserId = body.userId as string;
     const authUserId = await getAuthenticatedUser(req);
-    const userId = authUserId || paramsUserId;
+    const userId = authUserId;
 
-    if (!authUserId) {
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    
-    if (paramsUserId && paramsUserId !== authUserId) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const platform = body.platform || 'default';
@@ -100,14 +89,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No content provided" }, { status: 400 });
     }
 
+    const MAX_CONTENT_LENGTH = 4000;
+    if (content.length > MAX_CONTENT_LENGTH) {
+      return NextResponse.json({ error: 'Content too long' }, { status: 400 });
+    }
+
+    const contentHash = createHash('sha256').update(content).digest('hex');
+
     if (action === 'improve') {
-      const sanitizedContent = content.replace(/[`"\\]/g, ' ').slice(0, 4000);
       const improvePrompt = `[MISSION: SCRIPT IMPROVEMENT]
 You are a ruthless viral script editor.
 Goal: Take the provided draft and transform it into a high-retention performance script for ${platform}.
-
-INPUT DRAFT:
-"${sanitizedContent}"
 
 Process:
 1. Critique: Analyze the existing script against virality criteria (Hook, Pacing, Clarity, Relatability).
@@ -119,29 +111,31 @@ You MUST return a JSON object containing:
 1. "improvements": An array of objects: { "original": string, "tweak": string, "reasoning": string }.
 2. "script": An array of script beats: { "timestamp": string, "speaker": string, "action": string, "dialogue": string }.
 3. "title": A punchy viral title.
-4. "authenticityScore": 0-100.
+4. "viralityScore": 0-100.
 `;
 
       const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
       const completion = await fetchWithRetry(() => openai.chat.completions.create({
         model: "gpt-5.4", // Strong model for improvement pass
         messages: [
-          { role: "system", content: "You are an expert script improver." },
-          { role: "user", content: improvePrompt }
+          { role: "system", content: improvePrompt },
+          { role: "user", content: content }
         ],
         response_format: { type: "json_object" }
       }));
 
       const improvedResult = JSON.parse(completion.choices[0].message.content || "{}");
       improvedResult.is_improvement = true;
+      improvedResult.platform = platform.toLowerCase();
+
       // ... storage logic remains the same
 
       if (userId) {
-        const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
         await supabaseAdmin.from('audit_history').insert({
           user_id: userId,
           content: content,
-          score: improvedResult.authenticityScore || 0,
+          content_hash: contentHash,
+          score: improvedResult.viralityScore || 0,
           result: improvedResult
         });
       }
@@ -149,7 +143,6 @@ You MUST return a JSON object containing:
       return NextResponse.json(improvedResult);
     }
 
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
     const targetPlatform = platform.toLowerCase();
     const profile = platformProfiles[targetPlatform] || platformProfiles['default'];
 
@@ -160,7 +153,7 @@ You MUST return a JSON object containing:
         .from('audit_history')
         .select('result')
         .eq('user_id', userId)
-        .eq('content', content); // minor tweaks = diff content = new audit
+        .eq('content_hash', contentHash); // using hashed content
 
       if (existingList && existingList.length > 0) {
         const exactMatch = existingList.find((row) => (row.result?.platform || 'default') === targetPlatform);
@@ -170,9 +163,7 @@ You MUST return a JSON object containing:
       }
     }
 
-    const prompt = `Analyze this short-form script or content: "${content}".
-
-YOU ARE A CREATOR-CRITICAL VIRAL CONTENT STRATEGIST.
+    const systemPrompt = `YOU ARE A CREATOR-CRITICAL VIRAL CONTENT STRATEGIST.
 You are a ruthless auditor evaluating this script specifically for: ${targetPlatform.toUpperCase()}.
 
 ${profile.context}
@@ -241,8 +232,8 @@ Return a valid JSON object ONLY:
         const completion = await fetchWithRetry(() => openai.chat.completions.create({
           model: "gpt-4o",
           messages: [
-            { role: "system", content: prompt.replace(`Analyze this short-form script or content: "${content}".`, "").trim() },
-            { role: "user", content: `Analyze this short-form script or content: "${content}".` }
+            { role: "system", content: systemPrompt },
+            { role: "user", content: content }
           ],
           response_format: { type: "json_object" },
           temperature: 0.9
@@ -269,8 +260,8 @@ Return a valid JSON object ONLY:
           body: JSON.stringify({
             "model": "openai/gpt-4o",
             "messages": [
-              { "role": "system", "content": prompt.replace(`Analyze this short-form script/transcript: "${content}".`, "").trim() },
-              { "role": "user", "content": `Analyze this short-form script/transcript: "${content}".` }
+              { "role": "system", "content": systemPrompt },
+              { "role": "user", "content": content }
             ],
             "temperature": 0.7,
             "response_format": { "type": "json_object" }
@@ -295,6 +286,7 @@ Return a valid JSON object ONLY:
       const { error: saveError } = await supabaseAdmin.from('audit_history').insert({
         user_id: userId,
         content: content,
+        content_hash: contentHash,
         score: aiResult.viralityScore,
         result: aiResult
       });
